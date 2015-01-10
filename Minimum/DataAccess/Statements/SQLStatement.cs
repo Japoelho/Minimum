@@ -31,7 +31,7 @@ namespace Minimum.DataAccess.Statement
             string joins = SelectTables(_alias);
             string columns = SelectColumns(_alias);
 
-            query.Append(" SELECT ");
+            query.Append("SELECT ");
             query.Append(columns);
             query.Append(" FROM ");
             query.Append(table.Name);
@@ -214,7 +214,7 @@ namespace Minimum.DataAccess.Statement
                     case JoinType.LazyJoin:
                         {
                             joinAlias = alias.Aliases.FirstOrDefault(a => a.Column == alias.Table.Columns[i]);
-                            if (joinAlias == null) { return null; }
+                            if (joinAlias == null) { continue; }
                             tables.Append(" LEFT JOIN ");
                             break;
                         }
