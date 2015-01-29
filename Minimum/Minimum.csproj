@@ -11,6 +11,12 @@
     <AssemblyName>Minimum</AssemblyName>
     <TargetFrameworkVersion>v4.5</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
+    <SolutionDir Condition="$(SolutionDir) == '' Or $(SolutionDir) == '*Undefined*'">..\</SolutionDir>
+    <RestorePackages>true</RestorePackages>
+    <SccProjectName>SAK</SccProjectName>
+    <SccLocalPath>SAK</SccLocalPath>
+    <SccAuxPath>SAK</SccAuxPath>
+    <SccProvider>SAK</SccProvider>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
     <DebugSymbols>true</DebugSymbols>
@@ -36,7 +42,7 @@
     </Reference>
     <Reference Include="Newtonsoft.Json, Version=6.0.0.0, Culture=neutral, PublicKeyToken=30ad4fe6b2a6aeed, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
-      <HintPath>..\packages\Newtonsoft.Json.6.0.7\lib\net45\Newtonsoft.Json.dll</HintPath>
+      <HintPath>..\packages\Newtonsoft.Json.6.0.8\lib\net45\Newtonsoft.Json.dll</HintPath>
     </Reference>
     <Reference Include="System" />
     <Reference Include="System.ComponentModel.DataAnnotations" />
@@ -54,24 +60,22 @@
     <Compile Include="Connection\ConnectionFactory.cs" />
     <Compile Include="Connection\Interfaces\ICommand.cs" />
     <Compile Include="Connection\Interfaces\IConnection.cs" />
-    <Compile Include="Connection\Services\AccessConnection.cs" />
-    <Compile Include="Connection\Services\SQLConnection.cs" />
+    <Compile Include="Connection\Interfaces\IConnectionInfo.cs" />
+    <Compile Include="Connection\Services\Access.cs" />
+    <Compile Include="Connection\Services\SQL.cs" />
     <Compile Include="DataAccess\Criteria\Criteria.cs" />
     <Compile Include="DataAccess\Criteria\ExpressionParser.cs" />
     <Compile Include="DataAccess\DataAccess.cs" />
     <Compile Include="DataAccess\Mapping\Attributes.cs" />
-    <Compile Include="DataAccess\Mapping\Maps.cs" />
-    <Compile Include="DataAccess\Statements\AccessStatement.cs" />
-    <Compile Include="DataAccess\Statements\IStatement.cs" />
-    <Compile Include="DataAccess\Statements\SQLStatement.cs" />
-    <Compile Include="DataAccess\Versions\DataAccess v0.8\Criteria\Criteria.cs" />
-    <Compile Include="DataAccess\Versions\DataAccess v0.8\Criteria\ExpressionParser.cs" />
-    <Compile Include="DataAccess\Versions\DataAccess v0.8\DataAccess.cs" />
-    <Compile Include="DataAccess\Versions\DataAccess v0.8\Mapping\Attributes.cs" />
-    <Compile Include="DataAccess\Versions\DataAccess v0.8\Mapping\Mappings.cs" />
-    <Compile Include="DataAccess\Versions\DataAccess v0.8\Mapping\Maps.cs" />
-    <Compile Include="DataAccess\Versions\DataAccess v0.8\Statements\IStatement.cs" />
-    <Compile Include="DataAccess\Versions\DataAccess v0.8\Statements\SQLStatement.cs" />
+    <Compile Include="DataAccess\Mapping\IMapper.cs" />
+    <Compile Include="DataAccess\Mapping\Mapper.cs" />
+    <Compile Include="DataAccess\Mapping\Alias.cs" />
+    <Compile Include="DataAccess\Query\Query.cs" />
+    <Compile Include="DataAccess\Query\QueryMap.cs" />
+    <Compile Include="DataAccess\Query\QueryVault.cs" />
+    <Compile Include="DataAccess\Statement\IStatement.cs" />
+    <Compile Include="DataAccess\Statement\SQL.cs" />
+    <Compile Include="DataAccess\Statement\StatementFactory.cs" />
     <Compile Include="FileFormats\Excel.cs" />
     <Compile Include="FileFormats\PDF.cs" />
     <Compile Include="FileFormats\Word.cs" />
@@ -88,7 +92,6 @@
   <ItemGroup>
     <None Include="packages.config" />
   </ItemGroup>
-  <ItemGroup />
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
        Other similar extension points exist, see Microsoft.Common.targets.

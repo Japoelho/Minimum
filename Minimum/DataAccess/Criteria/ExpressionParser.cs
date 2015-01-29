@@ -3,9 +3,9 @@ using System.Linq.Expressions;
 
 namespace Minimum.DataAccess
 {
-    internal static class ExpressionParser
+    internal static class Parser
     {
-        internal static Criteria GetCriteria(Expression expression)
+        internal static Criteria Criteria(Expression expression)
         {
             if (expression == null) { return null; }
 

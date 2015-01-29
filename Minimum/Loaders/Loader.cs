@@ -179,7 +179,7 @@ namespace Minimum
                     PropertyInfo[] properties = valueType.GetProperties();
                     for (int i = 0; i < properties.Length; i++)
                     {   
-                        if (properties[i].PropertyType.IsArray || typeof(Array).IsAssignableFrom(properties[i].PropertyType) || (properties[i].PropertyType.IsGenericType && properties[i].PropertyType.GetGenericTypeDefinition() == typeof(IList<>)))
+                        if (properties[i].PropertyType.IsArray || typeof(Array).IsAssignableFrom(properties[i].PropertyType) || typeof(IList).IsAssignableFrom(properties[i].PropertyType) || (properties[i].PropertyType.IsGenericType && properties[i].PropertyType.GetGenericTypeDefinition() == typeof(IList<>)))
                         {
                             LoadObjectIntoNode(xElement, properties[i].GetValue(value), properties[i]);
                         }
@@ -333,12 +333,10 @@ namespace Minimum
             public static string ToString(string resourceName)
             {
                 Assembly assembly = Assembly.GetCallingAssembly();
-                using (Stream stream = assembly.GetManifestResourceStream(resourceName))
+                Stream stream = assembly.GetManifestResourceStream(resourceName);                
+                using (StreamReader reader = new StreamReader(stream))
                 {
-                    using (StreamReader reader = new StreamReader(stream))
-                    {
-                        return reader.ReadToEnd();
-                    }
+                    return reader.ReadToEnd();
                 }
             }
 

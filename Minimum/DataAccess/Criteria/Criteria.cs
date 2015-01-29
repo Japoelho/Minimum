@@ -4,8 +4,11 @@ namespace Minimum.DataAccess
 {
     public abstract class Criteria
     {
+        #region [ Properties ]
         internal abstract CriteriaType Type { get; }
+        #endregion
 
+        #region [ Public ]
         public static Criteria EqualTo(string propertyPath, object value)
         {
             return new BinaryCriteria()
@@ -148,14 +151,25 @@ namespace Minimum.DataAccess
             };
         }
 
-        //public static Criteria Limit(int count)
-        //{
-        //    return new LimitCriteria()
-        //    {
-        //        Value = count
-        //    };
-        //}
+        public static Criteria Limit(int count)
+        {
+            return new LimitCriteria()
+            {
+                Value = count
+            };
+        }
 
+        public static Criteria Order(string propertyPath, OrderBy orderBy)
+        {
+            return new OrderCriteria()
+            {
+                Member = EvaluatePath(propertyPath),
+                Ascending = orderBy == OrderBy.Ascending ? true : false
+            };
+        }
+        #endregion
+
+        #region [ Private ]
         private static Criteria EvaluatePath(string propertyPath)
         {
             MemberCriteria criteria = new MemberCriteria();
@@ -173,7 +187,11 @@ namespace Minimum.DataAccess
 
             return criteria;
         }
+        #endregion
     }
+
+    public enum OrderBy
+    { Ascending, Descending }
 
     internal class ValueCriteria : Criteria
     {
@@ -187,7 +205,6 @@ namespace Minimum.DataAccess
     {
         internal Criteria Member { get; set; }
         internal string Name { get; set; }
-        internal string Value { get; set; }
         internal override CriteriaType Type { get { return CriteriaType.Member; } }
     }
 
@@ -206,8 +223,15 @@ namespace Minimum.DataAccess
         internal override CriteriaType Type { get { return CriteriaType.Limit; } }
     }
 
+    internal class OrderCriteria : Criteria 
+    {
+        internal Criteria Member { get; set; }
+        internal bool Ascending { get; set; }
+        internal override CriteriaType Type { get { return CriteriaType.Order; } }
+    }
+
     internal enum CriteriaType
-    { Value, Member, Binary, Limit }
+    { Value, Member, Binary, Limit, Order }
 
     internal enum BinaryOperand
     { Equal, NotEqual, GreaterThan, GreaterEqualThan, LowerThan, LowerEqualThan, And, Or, Between, In }

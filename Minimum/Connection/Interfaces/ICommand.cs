@@ -8,8 +8,8 @@ namespace Minimum.Connection.Interfaces
         string CommandText { get; set; }
 
         IDataReader ExecuteReader();
-        int ExecuteNonQuery();
-        object ExecuteScalar();
+        object ExecuteScalar(); 
+        int ExecuteNonQuery();        
         void AddParameterInput(string parameterName, DbType parameterType, object parameterValue);
         void AddParameterInput(string parameterName, DbType parameterType, object parameterValue, int parameterSize);
         void AddParameterOutput(string parameterName, DbType parameterType);

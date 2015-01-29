@@ -8,11 +8,12 @@ namespace Minimum.Proxy
 {
     public class Proxies
     {
+        private static Proxies _instance = null;
         private AssemblyBuilder _assembly;
         private ModuleBuilder _moduleBuilder;
         private IList<Type> _proxyTypes;
 
-        public Proxies()
+        private Proxies()
         {
             _proxyTypes = new List<Type>();
 
@@ -23,6 +24,13 @@ namespace Minimum.Proxy
             
             _assembly = AppDomain.CurrentDomain.DefineDynamicAssembly(assemblyName, AssemblyBuilderAccess.RunAndSave);
             _moduleBuilder = _assembly.DefineDynamicModule("DynamicModule", "MinimumDynamic.dll", true);
+        }
+
+        public static Proxies GetInstance()
+        {
+            if (_instance == null) { _instance = new Proxies(); }
+
+            return _instance;
         }
 
         public void SaveDynamic()

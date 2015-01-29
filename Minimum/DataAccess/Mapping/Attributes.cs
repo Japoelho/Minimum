@@ -1,119 +1,110 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Reflection;
 
 namespace Minimum.DataAccess.Mapping
 {
-    [AttributeUsage(AttributeTargets.Class | AttributeTargets.Property, AllowMultiple = false, Inherited = false)]
+    [AttributeUsage(AttributeTargets.Class, AllowMultiple = false, Inherited = false)]
     public class Table : Attribute
     {
-        internal Table Base { get; set; }
-        internal Join[] Joins { get; set; }
-        internal Type Type { get; set; }
-        internal IList<Column> Columns { get; set; }
+        /// <summary>
+        /// The name of the table.
+        /// </summary>
         internal string Name { get; set; }
 
-        internal Table()
-        { }
+        /// <summary>
+        /// The name of the schema.
+        /// </summary>
+        internal string Schema { get; set; }
 
+        /// <summary>
+        /// The name of the database.
+        /// </summary>
+        internal string Database { get; set; }
+
+        /// <param name="name">The name of the table.</param>
         public Table(string name)
         {
             Name = name;
         }
 
-        public Table(Type type)
+        /// <param name="name">The name of the table.</param>
+        /// <param name="schema">The name of the schema.</param>
+        public Table(string name, string schema)
         {
-            Type = type;
+            Name = name;
+            Schema = schema;
+        }
+
+        /// <param name="name">The name of the table.</param>
+        /// <param name="schema">The name of the schema.</param>
+        /// <param name="database">The name of the database.</param>
+        public Table(string name, string schema, string database)
+        {
+            Name = name;
+            Schema = schema;
+            Database = database;
         }
     }
 
     [AttributeUsage(AttributeTargets.Property, AllowMultiple = false, Inherited = false)]
     public class Column : Attribute
     {
-        //internal Table Table { get; set; }
-        internal Join[] Joins { get; set; }
-        //internal Aggregate Aggregate { get; set; }
-        internal PropertyInfo Property { get; set; }
+        /// <summary>
+        /// The name of the column.
+        /// </summary>
         internal string Name { get; set; }
-        internal bool IsIgnore { get; set; }
-        internal bool IsIdentity { get; set; }
-        //internal bool IsAggregate { get; set; }
-        internal bool IsClass { get; set; }
-        internal bool IsCollection { get; set; }
-        
 
-        internal Column()
-        { }
-
+        /// <param name="name">The name of the column.</param>
         public Column(string name)
         {
             Name = name;
         }
     }
 
-    [AttributeUsage(AttributeTargets.Class | AttributeTargets.Property, AllowMultiple = true, Inherited = false)]
+    [AttributeUsage(AttributeTargets.Class | AttributeTargets.Property, AllowMultiple = false, Inherited = false)]
     public class Join : Attribute
+    {
+        internal JoinType JoinType { get; set; }
+
+        public Join()
+        {
+            JoinType = JoinType.InnerJoin;
+        }
+
+        public Join(JoinType joinType)
+        {
+            JoinType = joinType;
+        }
+    }
+
+    [AttributeUsage(AttributeTargets.Property, AllowMultiple = false, Inherited = false)]
+    public class Key : Attribute { }
+
+    [AttributeUsage(AttributeTargets.Property, AllowMultiple = false, Inherited = false)]
+    public class Lazy : Attribute { }
+
+    [AttributeUsage(AttributeTargets.Property, AllowMultiple = false, Inherited = false)]
+    public class Ignore : Attribute { }
+
+    public enum JoinType
+    {
+        InnerJoin, LeftJoin, RightJoin
+    }
+
+    [AttributeUsage(AttributeTargets.Class | AttributeTargets.Property, AllowMultiple = true, Inherited = false)]
+    public class On : Attribute
     {
         internal string PrimaryKey { get; set; }
         internal string ForeignKey { get; set; }
-        internal JoinType JoinType { get; set; }
 
-        /// <summary>        
-        /// Assumes this class' Identity property equals to the assigned property class' Identity.
-        /// </summary>
-        public Join(JoinType joinType = JoinType.LazyJoin)
+        public On(string thisValue)
         {
-            JoinType = joinType;
-        }        
-
-        /// <summary>
-        /// Assumes "thisColumn" to be equal the assigned property class' Identity.
-        /// </summary>        
-        public Join(string thisColumn, JoinType joinType = JoinType.LazyJoin)
-        {
-            ForeignKey = thisColumn;
-            JoinType = joinType;
+            PrimaryKey = thisValue;
         }
-        
-        /// <summary>
-        /// Assumes "thisColumn" to be equal to "referenceColumn" in the assigned property class.
-        /// </summary>        
-        public Join(string thisColumn, string referenceColumn, JoinType joinType = JoinType.LazyJoin)
+
+        public On(string thisValue, string thatValue)
         {
-            PrimaryKey = referenceColumn;
-            ForeignKey = thisColumn;
-            JoinType = joinType;
+            PrimaryKey = thisValue;
+            ForeignKey = thatValue;
         }
     }
-
-    public enum JoinType
-    { InnerJoin, LeftJoin, LazyJoin }
-
-    public class Key : Attribute { }
-    public class Ignore : Attribute { }
-
-    public abstract class Aggregate : Attribute 
-    {
-        internal abstract string Command { get; set; }
-    }
-    
-    public class Count : Aggregate
-    {
-        internal string Name { get; set; }
-        internal override string Command { get { return "COUNT({0})"; } set { } }
-
-        public Count()
-        { }
-
-        public Count(string column)
-        {
-            Name = column;
-        }
-    }
-
-    //public class Max : Aggregate
-    //{ }
-
-    //public class Min : Aggregate
-    //{ }
 }
