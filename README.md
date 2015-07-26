@@ -15,7 +15,7 @@ Currently only supports T-SQL syntax.
 
 Still in progress. Will use OpenXml and iTextSharp for manipulation of common file types as .doc, .xls and .pdf.
 
-- Loaders
+- Converters
 
 Converters, loaders and a serializator.
 
@@ -35,3 +35,8 @@ Contains a validation from DataAnnotations for a general way to validate objects
 - First useable version. Trying it out on various projects, will be adding more features as I figure out the needs and problems.
 - Working on the Javascript Common Library/Tools.
 - Thinking on more useful tools/stuff that should be in here.
+
+# Version 1.1
+- Query optimizations for the DataAccess.
+- SQLite support added.
+- Improvements to the Query: managing sub-selects, sub-updates and sub-inserts.
