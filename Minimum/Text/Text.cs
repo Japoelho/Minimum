@@ -1,22 +1,30 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Text.RegularExpressions;
+using System.Windows;
+using System.Windows.Controls;
+using System.Windows.Input;
 
 namespace Minimum
 {
     public class Text
     {
+        public static bool IsNumeric(string source)
+        {
+            return Regex.Matches(source, "^[0-9]*$").Count > 0;
+        }
+
         public static string Remove(string source, string regexPattern)
         {
             return Regex.Replace(source, regexPattern, "");            
         }
 
-        public static string NumericOnly(string source)
+        public static string RemoveNonNumeric(string source)
         {
             return Regex.Replace(source, "[^0-9]", "");
         }
 
-        public static string PickCountNames(string name, int count)
+        public static string LimitNamesFrom(string name, int count)
         {
             IList<string> names = new List<string>();
 
@@ -54,7 +62,7 @@ namespace Minimum
             return result;
         }
 
-        public static string PickCountString(string source, int count)
+        public static string LimitWordsFrom(string source, int count)
         {
             string[] names = source.Split(' ');
 
@@ -87,6 +95,126 @@ namespace Minimum
             }
 
             return result;
+        }
+
+        public static string Replace(string source, string match, string replace)
+        {
+            int location = source.IndexOf(match);
+            if (location < 0) { return source; }
+            return source.Remove(location, match.Length).Insert(location, replace);
+        }
+
+        public static int Occurrences(string source, char match)
+        {
+            int count = 0;
+            foreach (char s in source) { if (s == match) { count++; } }
+            return count;
+        }
+
+        public static void Format(TextBox textBox, TextCompositionEventArgs e, string pattern)
+        {
+            if (e.Text.Length > 1) { throw new Exception("Não esperava por isso!"); }
+
+            while(true)
+            {
+                if (textBox.Text.Length >= pattern.Length)
+                {
+                    e.Handled = true;
+                    return;
+                }
+                else if (Regex.IsMatch(pattern[textBox.Text.Length].ToString(), "^[0-9]$")) // - Somente números
+                {
+                    if (Regex.IsMatch(e.Text, "^[0-9]$"))
+                    {
+                        e.Handled = false;
+                        return;
+                    }
+                    else
+                    {
+                        e.Handled = true;
+                        return;
+                    }
+                }
+                else if (Regex.IsMatch(pattern[textBox.Text.Length].ToString(), "^[a-zA-Z]$")) // - Somente caracteres
+                {
+                    if (Regex.IsMatch(e.Text, "^[a-zA-Z]$"))
+                    {
+                        e.Handled = false;
+                        return;
+                    }
+                    else
+                    {
+                        e.Handled = true;
+                        return;
+                    }
+                }
+                //else if (e.Text == pattern[e.Text.Length].ToString())
+                //{
+                //    e.Handled = false;
+                //    return;
+                //}
+                else
+                {
+                    int index = textBox.CaretIndex;
+                    textBox.Text = textBox.Text + pattern[textBox.Text.Length];
+                    textBox.CaretIndex = index + 1;
+                }
+            }
+        }
+
+        public static void Format(TextBox textBox, DataObjectPastingEventArgs e, string pattern)
+        {
+            if (e.DataObject.GetDataPresent(typeof(String)))
+            {
+                String text = (String)e.DataObject.GetData(typeof(String));
+
+                for (int i = 0; i < text.Length; i++)
+                {
+                    while (true)
+                    {
+                        if (textBox.Text.Length >= pattern.Length)
+                        {
+                            break;
+                        }
+                        else if (Regex.IsMatch(pattern[textBox.Text.Length].ToString(), "^[0-9]$")) // - Somente números
+                        {
+                            if (Regex.IsMatch(text[i].ToString(), "^[0-9]$"))
+                            {
+                                int index = textBox.CaretIndex;
+                                textBox.Text = textBox.Text + text[i];
+                                textBox.CaretIndex = index + 1;
+                            }
+                            break;                            
+                        }
+                        else if (Regex.IsMatch(pattern[textBox.Text.Length].ToString(), "^[a-zA-Z]$")) // - Somente caracteres
+                        {
+                            if (Regex.IsMatch(text[i].ToString(), "^[a-zA-Z]$"))
+                            {
+                                int index = textBox.CaretIndex;
+                                textBox.Text = textBox.Text + text[i];
+                                textBox.CaretIndex = index + 1;
+                            }
+                            break;
+                        }
+                        //else if (text[i].ToString() == pattern[text[i].ToString().Length].ToString())
+                        //{
+                        //    int index = textBox.CaretIndex;
+                        //    textBox.Text = textBox.Text + text[i];
+                        //    textBox.CaretIndex = index + 1;
+
+                        //    break;
+                        //}
+                        else
+                        {
+                            int index = textBox.CaretIndex;
+                            textBox.Text = textBox.Text + pattern[textBox.Text.Length];
+                            textBox.CaretIndex = index + 1;
+                        }
+                    }
+                }
+            }
+
+            e.CancelCommand();
         }
     }
 }

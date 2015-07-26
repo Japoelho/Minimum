@@ -1,7 +1,7 @@
 ﻿using System;
-using System.Text;
 using System.Drawing;
 using System.Drawing.Imaging;
+using System.Text;
 
 namespace Minimum.Loaders.WSQDecoder
 {

@@ -33,17 +33,20 @@ namespace Minimum.Proxy
             return _instance;
         }
 
-        public void SaveDynamic()
-        {
-            _assembly.Save("MinimumDynamic.dll");
-        }
+        //public void SaveDynamic()
+        //{
+        //    _assembly.Save("MinimumDynamic.dll");
+        //}
 
         public IProxy GetProxy(Type original)
         {
+            if (!original.IsPublic) { throw new ArgumentException("The type to be proxied must be declared as public. Invalid type: " + original.Name); }
+
             Type proxy = _proxyTypes.FirstOrDefault(p => p.BaseType == original);
             if (proxy != null) { return (IProxy)Activator.CreateInstance(proxy); }
 
-            TypeBuilder typeBuilder = _moduleBuilder.DefineType(original.Name + "Proxy", TypeAttributes.Public | TypeAttributes.Class, original, new Type[] { typeof(IProxy) });
+            string originalAssembly = original.Assembly.FullName.Substring(0, original.Assembly.FullName.IndexOf(','));
+            TypeBuilder typeBuilder = _moduleBuilder.DefineType(originalAssembly + "." + original.Name + "Proxy", TypeAttributes.Public | TypeAttributes.Class, original, new Type[] { typeof(IProxy) });
 
             if (original.IsGenericType)
             {
@@ -74,7 +77,7 @@ namespace Minimum.Proxy
                         
             FieldBuilder _interceptor = ImplementIProxy(typeBuilder);
 
-            MethodAttributes attributes = MethodAttributes.Public | MethodAttributes.SpecialName | MethodAttributes.HideBySig | MethodAttributes.Virtual | MethodAttributes.Final | MethodAttributes.NewSlot;            
+            MethodAttributes attributes = MethodAttributes.Public | MethodAttributes.SpecialName | MethodAttributes.HideBySig | MethodAttributes.Virtual | MethodAttributes.Final;
             foreach (MethodInfo method in original.GetMethods(BindingFlags.Public | BindingFlags.Instance))
             {
                 if (method.IsVirtual == false) { continue; }

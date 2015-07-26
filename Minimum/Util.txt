@@ -1,0 +1,230 @@
+﻿/ Object:  StoredProcedure [dbo].[sp_Pivota]    Script Date: 02/05/2015 12:03:34 /
+SET ANSI_NULLS ON
+GO
+
+SET QUOTED_IDENTIFIER ON
+GO
+
+CREATE procedure [dbo].[sp_Pivota]
+ (
+ @Tabela as varchar(128),
+ @ColunaPivo as varchar(128),
+ @ColunaValor as varchar(128)
+ )
+as
+
+set nocount on
+set ansi_warnings off
+
+/*-----------------------------------------------
+Declarações de variáveis a serem usadas 
+no processo
+-----------------------------------------------*/
+declare @Campos table (Coluna varchar(128), Tipo varchar(128), Tamanho int, Precisao int, Escala int, Collation sysname null)
+declare @Coluna varchar(128), @Tipo varchar(512), @Tamanho int, @Precisao int, @Escala int, @Collation sysname
+declare @Sql varchar(8000), @SelValores varchar(8000), @Condicoes varchar(8000)
+
+/*-----------------------------------------------
+Verifica se a tabela é temporária ou física e 
+obtêm os dados necessários dos campos
+-----------------------------------------------*/
+if left(@Tabela, 1) = '#'
+ begin
+  if exists (select * from tempdb..sysobjects where id = object_id('tempdb..' + @Tabela))
+   begin
+    insert into @Campos
+    select sc.Name as Coluna, st.Name as Tipo, sc.Length, sc.xprec, sc.xscale, sc.Collation
+    from tempdb..syscolumns sc
+    join tempdb..systypes st on st.xtype = sc.xtype and st.xusertype = sc.xusertype
+    join tempdb..sysobjects so on so.Id = sc.ID
+    where so.id = object_id('tempdb..' + @Tabela)
+    order by sc.colorder
+   end
+  else
+   begin
+    raiserror('Tabela inválida.', 18, 1)
+    return 0
+   end
+ end 
+else
+ begin
+  if exists (select * from sysobjects where id = object_id(@Tabela))
+   begin
+    insert into @Campos
+    select sc.Name as Coluna, st.Name as Tipo, sc.Length, sc.xprec, sc.xscale, sc.Collation
+    from syscolumns sc
+    join systypes st on st.xtype = sc.xtype and st.xusertype = sc.xusertype
+    join sysobjects so on so.Id = sc.ID
+    where so.id = object_id(@Tabela)
+    order by sc.colorder
+   end
+  else
+   begin
+    raiserror('Tabela inválida.', 18, 1)
+    return 0
+   end
+ end
+
+/*-----------------------------------------------
+Cria tabela temporária com os campos pivotados
+Cria string de condiçoes de relacionamento
+Cria string de campos não pivotados
+-----------------------------------------------*/
+create table #pivotada (tmp_tmp int)
+
+set @SelValores = 'Select distinct '
+set @Condicoes = 'on '
+
+declare c cursor local for 
+ select * 
+ from @Campos
+ where Coluna not in (@ColunaPivo, @ColunaValor)
+open c
+
+fetch c into @Coluna, @Tipo, @Tamanho, @Precisao, @Escala, @Collation
+
+while @@Fetch_Status = 0
+ begin
+  set @Sql = 'alter table #pivotada add [' + @coluna + '] ' + @Tipo
+  set @SelValores = @SelValores + ', [' + @coluna + ']'
+  set @Condicoes = @Condicoes + ' and isnull(a.[' + @coluna + '], ''0'') = isnull(b.[' + @coluna + '], ''0'')'
+  
+  if @Tipo in ('char', 'varchar', 'nchar', 'nvarchar', 'binary', 'varbinary')
+   begin
+    set @Sql = @Sql + '(' + cast(@Tamanho as varchar(10)) + ')'
+   end
+  
+  if @Tipo in ('numeric', 'Decimal')
+   begin   
+    set @Sql = @Sql + '(' + cast(@Precisao as varchar(10)) + ',' + cast(@Escala as varchar(10)) + ')'
+   end
+  
+  if @Tipo in ('float')
+   begin
+    set @Sql = @Sql + '(' + cast(@Precisao as varchar(10)) + ')'
+   end
+
+  if @Collation is not null
+   begin
+    set @Sql = @Sql + ' collate ' + @Collation
+   end
+
+  exec (@Sql)  
+
+  fetch c into @Coluna, @Tipo, @Tamanho, @Precisao, @Escala, @Collation
+ end
+
+close c
+deallocate c
+
+alter table #pivotada drop column tmp_tmp
+set @Condicoes = replace(@Condicoes, '  and', ' ')
+set @SelValores = replace(@SelValores, ' , ', '')
+
+/*-----------------------------------------------
+Alimenta tabela temporária com os valores que
+não serão pivotados
+-----------------------------------------------*/
+set @SelValores = 'Insert into #pivotada ' + @SelValores + ' from ' + @Tabela
+exec (@SelValores)
+
+/*-----------------------------------------------
+Adiciona colunas de valor pivotadas à tabela 
+temporária
+-----------------------------------------------*/
+--Cria e popula tabela com t[ítulos de coluna
+create table #Titulos (Coluna varchar(128))
+
+set @Sql = 'insert into #Titulos Select distinct cast(' + @ColunaPivo + ' as varchar(128)) from ' + @Tabela + ' order by 1'
+exec(@Sql)
+
+--Define tipo das colunas
+select @Tipo = Tipo, @Tamanho = Tamanho, @Precisao = Precisao, @Escala = Escala, @Collation = Collation
+from @Campos
+where Coluna = @ColunaValor
+
+
+if @Tipo in ('char', 'varchar', 'nchar', 'nvarchar', 'binary', 'varbinary')
+ begin
+  set @Tipo = @Tipo + '(' + cast(@Tamanho as varchar(10)) + ')'
+ end
+
+if @Tipo in ('numeric', 'Decimal')
+ begin   
+  set @Tipo = @Tipo + '(' + cast(@Precisao as varchar(10)) + ',' + cast(@Escala as varchar(10)) + ')'
+ end
+
+if @Tipo in ('float')
+ begin
+  set @Tipo = @Tipo + '(' + cast(@Precisao as varchar(10)) + ')'
+ end
+
+if @Collation is not null
+ Begin
+  set @Tipo = @Tipo + ' collate ' + @Collation
+ end
+
+--Adiciona colunas de valor uma a uma
+declare c cursor local for
+ select * from #Titulos
+
+open c
+
+fetch c into @Coluna
+
+while @@Fetch_Status = 0
+ begin
+  set @Sql = 'Alter table #Pivotada add [' + @Coluna + '] ' + @tipo
+  exec (@Sql)
+
+  fetch c into @Coluna
+ end
+close c
+deallocate c
+
+/*-----------------------------------------------
+Atribui valores às colunas pivotadas
+-----------------------------------------------*/
+declare c cursor for
+ Select * from #Titulos
+
+open c
+
+fetch c into @Coluna
+
+while @@Fetch_Status = 0
+ begin
+  set @Sql = 'Update a set [' + @Coluna + '] = b.[' + @ColunaValor + ']'
+    + ' from #pivotada a join ' + @Tabela + ' b ' + @Condicoes +
+    + ' Where left(b.[' + @ColunaPivo + '], 128) = ''' + @Coluna + ''''
+
+  exec (@Sql)
+
+  fetch c into @Coluna
+ end
+close c
+deallocate c
+
+/*-----------------------------------------------
+Retorna resultado da procedure
+sob forma de resultset ou nova tabela
+-----------------------------------------------*/
+if left(@Tabela, 1) = '#'
+ begin
+  print 'Retornando valores da tabela temporária'
+  select * from #pivotada  
+ end
+
+else
+ begin
+  set @Sql = 'drop table ' + @Tabela
+  exec (@Sql)
+
+  set @Sql = 'Select * into ' + @Tabela + ' from #Pivotada'
+  exec (@Sql)
+  --print 'Tabela Pivotada com sucesso'
+ end
+
+set nocount off
+set ansi_warnings on
+GO

@@ -7,66 +7,105 @@ using System.Collections.Generic;
 using System.Data;
 using System.Data.Common;
 using System.Linq;
-using System.Linq.Expressions;
 using System.Reflection;
 
 namespace Minimum.DataAccess
 {
-    public class Query<T> : IQuery where T : class
+    public class Procedure<T>
     {
         private IStatement _statement;
         private IConnection _connection;
 
         public IMap Map { get; private set; }
-        public IList<Criteria> Criterias { get; private set; }
 
-        public Query(IConnection connection, IMap map)
-        {
-            Criterias = new List<Criteria>();
+        public Procedure(IConnection connection, IMap map)
+        {            
             Map = map;
             
             _connection = connection;
             _statement = connection.NewStatement();
         }
 
-        public IQuery Where(IList<Criteria> criteria)
-        {
-            for (int i = 0; i < criteria.Count; i++)
-            { Criterias.Add(criteria[i]); }
-            return this;
-        }
-
-        public Query<T> Where(params Criteria[] criteria)
-        {
-            for (int i = 0; i < criteria.Length; i++)
-            { Criterias.Add(criteria[i]); }
-
-            return this;
-        }
-
-        public Query<T> Where(Expression<Func<T, bool>> expression)
-        {
-            Criterias.Add(CriteriaExpression.MapCriteria(expression));
-
-            return this;
-        }
-
-        public IList<T> Select()
+        public IList<T> Execute(params object[] parameters)
         {
             IList<T> list = new List<T>();
 
             using (DbConnection connection = _connection.NewConnection())
             {
                 connection.Open();
+                
+                string query = Map.QueryText;
+                if (Text.Occurrences(query, '?') > parameters.Length && parameters.Length == 1)
+                {
+                    query = query.Replace("?", _statement.FormatWriteValue(parameters[0], parameters[0].GetType()));
+                }
+                else
+                {
+                    for (int i = 0; i < parameters.Length; i++)
+                    {
+                        query = Text.Replace(query, "?", _statement.FormatWriteValue(parameters[i], parameters[i].GetType()));
+                    }
+                }
 
                 DbCommand command = connection.CreateCommand();
-                command.CommandText = _statement.Select(Map, Criterias);
+                command.CommandText = query;
 
                 using (IDataReader dataReader = command.ExecuteReader())
                 {
                     while (dataReader.Read())
                     {
-                        T entity = (T)Load(Map, dataReader);
+                        T entity = (T)Activator.CreateInstance(Map.Type);
+
+                        for (int i = 0; i < Map.Properties.Count; i++)
+                        {
+                            object dataValue = dataReader[Map.Properties[i].ColumnName];
+                            if (dataValue != DBNull.Value)
+                            {
+                                Map.Properties[i].PropertyInfo.SetValue(entity, _statement.FormatReadValue(dataValue, Map.Properties[i].PropertyInfo.PropertyType), null);
+                            }
+                        }
+
+                        list.Add(entity);
+                    }
+                }
+
+                for (int i = 0; i < list.Count; i++)
+                {
+                    Select(list[i], Map, connection);
+                }
+
+                connection.Close();
+            }
+
+            return list;
+        }
+
+        public IList<T> ExecuteQuery(string query)
+        {
+            IList<T> list = new List<T>();
+
+            using (DbConnection connection = _connection.NewConnection())
+            {
+                connection.Open();
+                
+                DbCommand command = connection.CreateCommand();
+                command.CommandText = query;
+
+                using (IDataReader dataReader = command.ExecuteReader())
+                {
+                    while (dataReader.Read())
+                    {
+                        T entity = (T)Activator.CreateInstance(Map.Type);
+
+                        for (int i = 0; i < Map.Properties.Count; i++)
+                        {
+                            object dataValue = dataReader[Map.Properties[i].ColumnName];
+                            if (dataValue != DBNull.Value)
+                            {
+                                Map.Properties[i].PropertyInfo.SetValue(entity, _statement.FormatReadValue(dataValue, Map.Properties[i].PropertyInfo.PropertyType), null);
+                            }
+                        }
+
                         list.Add(entity);
                     }
                 }
@@ -90,7 +129,7 @@ namespace Minimum.DataAccess
 
                 Type listType = typeof(List<>).MakeGenericType(map.Relations[i].Type);
                 map.Relations[i].PropertyInfo.SetValue(entity, Activator.CreateInstance(listType));
-                
+
                 object listProperty = map.Relations[i].PropertyInfo.GetValue(entity);
 
                 IList<Criteria> criterias = new List<Criteria>();
@@ -123,192 +162,6 @@ namespace Minimum.DataAccess
             }
         }
 
-        public T Update(T entity)
-        {
-            using (DbConnection connection = _connection.NewConnection())
-            {
-                connection.Open();
-
-                Update(entity, Map, connection);
-
-                DbCommand command = connection.CreateCommand();
-                command.CommandText = _statement.Update(Map, Criterias, entity);
-
-                if (!String.IsNullOrEmpty(command.CommandText)) { command.ExecuteNonQuery(); }
-
-                connection.Close();
-            }
-
-            return entity;
-        }
-
-        private void Update(object entity, IMap map, DbConnection connection)
-        {
-            for (int i = 0; i < map.Relations.Count; i++)
-            {
-                if (!map.Relations[i].IsInheritance) { continue; }
-
-                Update(entity, map.Relations[i].JoinMap, connection);
-
-                IList<Criteria> criterias = new List<Criteria>();
-                for (int j = 0; j < map.Relations[i].On.Length; j++)
-                {
-                    object joinWhere = map.Properties.FirstOrDefault(p => p.ColumnName == map.Relations[i].On[j].ForeignKey).PropertyInfo.GetValue(entity);
-                    Property property = map.Relations[i].JoinMap.Properties.FirstOrDefault(p => p.ColumnName == map.Relations[i].On[j].PrimaryKey);
-                    if (property == null) { throw new ArgumentException("Invalid On criteria for Join."); }
-
-                    criterias.Add(Criteria.EqualTo(property.PropertyInfo.Name, joinWhere));
-                }
-
-                DbCommand command = connection.CreateCommand();
-                command.CommandText = _statement.Update(map.Relations[i].JoinMap, criterias, entity);
-
-                command.ExecuteNonQuery();
-            }
-        }
-
-        public T Insert(T entity)
-        {
-            using (DbConnection connection = _connection.NewConnection())
-            {
-                connection.Open();
-
-                Property identity = Map.Properties.FirstOrDefault(p => p.IsIdentity);
-                object identityID = Insert(entity, Map, connection);
-                if (identity != null) { identity.PropertyInfo.SetValue(entity, Convert.ChangeType(identityID, identity.Type)); }
-
-                DbCommand command = connection.CreateCommand();
-                command.CommandText = _statement.Insert(Map, entity);
-
-                command.ExecuteNonQuery();
-
-                command.CommandText = _statement.GetInsertedID();
-                identityID = command.ExecuteScalar();
-
-                if (identity != null && identityID != DBNull.Value) { identity.PropertyInfo.SetValue(entity, Convert.ChangeType(identityID, identity.Type)); }
-
-                connection.Close();
-            }
-
-            return entity;
-        }
-
-        private object Insert(object entity, IMap map, DbConnection connection)
-        {
-            object identityID = 0;
-
-            for (int i = 0; i < map.Relations.Count; i++)
-            {
-                if (!map.Relations[i].IsInheritance) { continue; }
-
-                Property identity = Map.Properties.FirstOrDefault(p => p.IsIdentity);
-                identityID = Insert(entity, map.Relations[i].JoinMap, connection);
-                if (identity != null) { identity.PropertyInfo.SetValue(entity, Convert.ChangeType(identityID, identity.Type)); }
-
-                DbCommand command = connection.CreateCommand();
-                command.CommandText = _statement.Insert(Map.Relations[i].JoinMap, entity);
-
-                command.ExecuteNonQuery();
-
-                command.CommandText = _statement.GetInsertedID();
-                identityID = command.ExecuteScalar();
-
-                if (identity != null && identityID != DBNull.Value) { identity.PropertyInfo.SetValue(entity, Convert.ChangeType(identityID, identity.Type)); }
-            }
-
-            return identityID;
-        }
-
-        public T Delete(T entity)
-        {
-            using (DbConnection connection = _connection.NewConnection())
-            {
-                connection.Open();
-
-                DbCommand command = connection.CreateCommand();
-                command.CommandText = _statement.Delete(Map, Criterias, entity);
-
-                command.ExecuteNonQuery();
-
-                Delete(entity, Map, connection);
-
-                connection.Close();
-            }
-
-            return entity;
-        }
-
-        private void Delete(T entity, IMap map, DbConnection connection)
-        {
-            for (int i = 0; i < map.Relations.Count; i++)
-            {
-                if (!map.Relations[i].IsInheritance) { continue; }
-
-                IList<Criteria> criterias = new List<Criteria>();
-                for (int j = 0; j < map.Relations[i].On.Length; j++)
-                {
-                    object joinWhere = map.Properties.FirstOrDefault(p => p.ColumnName == map.Relations[i].On[j].ForeignKey).PropertyInfo.GetValue(entity);
-                    Property property = map.Relations[i].JoinMap.Properties.FirstOrDefault(p => p.ColumnName == map.Relations[i].On[j].PrimaryKey);
-                    if (property == null) { throw new ArgumentException("Invalid On criteria for Join."); }
-
-                    criterias.Add(Criteria.EqualTo(property.PropertyInfo.Name, joinWhere));
-                }
-
-                DbCommand command = connection.CreateCommand();
-                command.CommandText = _statement.Delete(map.Relations[i].JoinMap, criterias, entity);
-
-                command.ExecuteNonQuery();
-
-                Delete(entity, map.Relations[i].JoinMap, connection);
-            }
-        }
-
-        public long Count()
-        {
-            long rows = 0;
-
-            using (DbConnection connection = _connection.NewConnection())
-            {
-                connection.Open();
-
-                DbCommand command = connection.CreateCommand();
-                command.CommandText = _statement.Count(Map, Criterias);
-                
-                rows = Convert.ToInt64(command.ExecuteScalar());
-
-                connection.Close();
-            }
-
-            return rows;
-        }
-
-        public void Create()
-        {
-            using (DbConnection connection = _connection.NewConnection())
-            {
-                DbCommand command = connection.CreateCommand();
-                command.CommandText = _statement.Create(Map);
-
-                command.ExecuteNonQuery();
-            }
-        }
-
-        public void Drop()
-        {
-            using (DbConnection connection = _connection.NewConnection())
-            {
-                DbCommand command = connection.CreateCommand();
-                command.CommandText = _statement.Drop(Map);
-
-                command.ExecuteNonQuery();
-            }
-        }
-
-        public bool Exists()
-        {
-            return false; 
-        }
-
         private object Load(IMap map, IDataReader dataReader)
         {
             bool useProxy = map.Relations.Any(r => r.IsLazy);
@@ -329,7 +182,7 @@ namespace Minimum.DataAccess
             if (useProxy)
             {
                 IProxy proxy = Proxies.GetInstance().GetProxy(map.Type);
-                return LoadProxy(proxy, map, dataReader);                
+                return LoadProxy(proxy, map, dataReader);
             }
             else
             {
@@ -354,8 +207,8 @@ namespace Minimum.DataAccess
                 if (map.Relations[i].IsCollection || map.Relations[i].IsLazy) { continue; }
 
                 if (map.Relations[i].IsInheritance)
-                { 
-                    LoadObject(entity, map.Relations[i].JoinMap, dataReader); 
+                {
+                    LoadObject(entity, map.Relations[i].JoinMap, dataReader);
                 }
                 else
                 {

@@ -1,19 +1,15 @@
-﻿using System;
-using System.IO;
-using System.Drawing;
-using System.Drawing.Imaging;
-using System.Linq;
-using System.Xml.Linq;
+﻿using Newtonsoft.Json;
+using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Linq;
 using System.Reflection;
-using Newtonsoft.Json;
-using Minimum.XML.Mapping;
-using Minimum.Loaders.WSQDecoder;
+using System.Xml.Linq;
+using System.Xml.XPath;
 
-namespace Minimum
+namespace Minimum.Serialization
 {
-    public class Loader
+    public class Serializer
     {
         public class XML
         {
@@ -59,9 +55,29 @@ namespace Minimum
                     for (int i = 0; i < properties.Length; i++)
                     {
                         XElement element = null;
+                        
+                        XPath xPath = Attribute.GetCustomAttribute(properties[i], typeof(XPath)) as XPath;
+                        if (xPath != null)
+                        {
+                            string selectValue = xPath.Value.LastIndexOf('/') > -1 ? xPath.Value.Substring(xPath.Value.LastIndexOf('/') + 1) : xPath.Value;
+                            if (selectValue[0] == '@')
+                            {
+                                string elementPath = xPath.Value.LastIndexOf('/') > -1 ? xPath.Value.Substring(0, xPath.Value.LastIndexOf('/')) : null;
+                                element = elementPath != null ? xElement.XPathSelectElement(elementPath) : xElement;
 
-                        Node nodeName = Attribute.GetCustomAttribute(properties[i], typeof(Node)) as Node;
-                        element = nodeName != null ? xElement.Element(nodeName.Name) : xElement.Element(properties[i].Name);
+                                XAttribute attribute = element.Attribute(selectValue.Substring(1));
+                                if (attribute == null) { continue; }
+
+                                properties[i].SetValue(value, FormatReadValue(attribute.Value, properties[i].PropertyType, properties[i]), null);
+                                continue;
+                            }
+
+                            element = xElement.XPathSelectElement(xPath.Value);
+                        }
+                        else
+                        {
+                            element = xElement.Element(properties[i].Name);
+                        }
 
                         if (element != null)
                         {
@@ -137,8 +153,10 @@ namespace Minimum
             {
                 Type valueType = value != null ? value.GetType() : property.PropertyType;
 
-                Node nodeName = property != null ? Attribute.GetCustomAttribute(property, typeof(Node)) as Node : Attribute.GetCustomAttribute(valueType, typeof(Node)) as Node;
-                string elementName = nodeName != null ? nodeName.Name : property != null ? property.Name : valueType.Name;
+                XPath xPath = property != null ? Attribute.GetCustomAttribute(property, typeof(XPath)) as XPath : Attribute.GetCustomAttribute(valueType, typeof(XPath)) as XPath;
+                string elementName = xPath != null ? xPath.Value : property != null ? property.Name : valueType.Name;
+                //Node nodeName = property != null ? Attribute.GetCustomAttribute(property, typeof(Node)) as Node : Attribute.GetCustomAttribute(valueType, typeof(Node)) as Node;
+                //string elementName = nodeName != null ? nodeName.Name : property != null ? property.Name : valueType.Name;
 
                 IsEmpty isEmpty = property != null ? Attribute.GetCustomAttribute(property, typeof(IsEmpty)) as IsEmpty : Attribute.GetCustomAttribute(valueType, typeof(IsEmpty)) as IsEmpty;
                 if (value == null)
@@ -213,7 +231,7 @@ namespace Minimum
                 {
                     case "Boolean":
                     case "bool":
-                        { return value.ToString(); }
+                        { return Convert.ToByte(value).ToString(); }
                     case "Single":
                         {
                             if (valueFormat != null) { return Convert.ToSingle(value).ToString(valueFormat.Value); }
@@ -255,103 +273,6 @@ namespace Minimum
             public static string Load(object element)
             {
                 return JsonConvert.SerializeObject(element);
-            }
-        }
-
-        public class IMG
-        {
-            public static byte[] ToJPG(string base64string)
-            {
-                return ConvertImage(base64string, ImageFormat.Jpeg);
-            }
-
-            public static byte[] ToBMP(string base64string)
-                {
-                return ConvertImage(base64string, ImageFormat.Bmp);
-            }
-                    
-            public static byte[] ToPNG(string base64string)
-            {
-                return ConvertImage(base64string, ImageFormat.Png);
-                }
-
-            public static byte[] ToGIF(string base64string)
-            {
-                return ConvertImage(base64string, ImageFormat.Gif);
-            }
-
-            private static byte[] ConvertImage(string base64string, ImageFormat imageFormat)
-            {
-                using (MemoryStream stream = new MemoryStream(Convert.FromBase64String(base64string)))
-                {
-                    MemoryStream converted = new MemoryStream();
-                    Image.FromStream(stream).Save(converted, imageFormat);
-
-                    return converted.ToArray();
-                }
-            }
-        }
-
-        public class WSQ
-        {
-            public static byte[] ToJPG(string base64string)
-            {
-                return ConvertImage(base64string, ImageFormat.Jpeg);
-            }
-
-            public static byte[] ToBMP(string base64string)
-            {
-                return ConvertImage(base64string, ImageFormat.Bmp);
-                }
-
-            public static byte[] ToPNG(string base64string)
-            {
-                return ConvertImage(base64string, ImageFormat.Png);
-            }
-
-            public static byte[] ToGIF(string base64string)
-            {
-                return ConvertImage(base64string, ImageFormat.Gif);
-            }
-
-            private static byte[] ConvertImage(string base64string, ImageFormat imageFormat)
-            {
-                WSQDecoder decoder = new WSQDecoder();
-                Bitmap bitmap = decoder.Decode(Convert.FromBase64String(base64string));
-
-                using (MemoryStream stream = new MemoryStream())
-                {
-                    bitmap.Save(stream, imageFormat);
-
-                    return stream.ToArray();
-                }
-            }
-        }
-
-        public class EmbeddedResource
-        {
-            public static string ToString(string resourceName)
-            {
-                Assembly assembly = Assembly.GetCallingAssembly();
-                Stream stream = assembly.GetManifestResourceStream(resourceName);                
-                using (StreamReader reader = new StreamReader(stream))
-                {
-                    return reader.ReadToEnd();
-                }
-            }
-
-            public static byte[] ToByte(string resourceName)
-            {
-                Assembly assembly = Assembly.GetCallingAssembly();
-                //string[] ress = assembly.GetManifestResourceNames();
-                using (Stream stream = assembly.GetManifestResourceStream(resourceName))
-                {
-                    using (MemoryStream memoryStream = new MemoryStream())
-                    {
-                        stream.CopyTo(memoryStream);
-                        return memoryStream.ToArray();
-                    }                    
-                }
             }
         }
     }

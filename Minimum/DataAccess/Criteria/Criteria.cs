@@ -159,12 +159,37 @@ namespace Minimum.DataAccess
             };
         }
 
+        public static Criteria Like(string propertyPath, object value)
+        {
+            return new BinaryCriteria()
+            {
+                UseBrackets = false,
+                Operand = BinaryOperand.And,
+                LeftValue = null,
+                RightValue = new BinaryCriteria()
+                {
+                    UseBrackets = true,
+                    Operand = BinaryOperand.Like,
+                    LeftValue = EvaluatePath(propertyPath),
+                    RightValue = new ValueCriteria() { Value = value, ValueType = value.GetType(), UseBrackets = false }
+                }
+            };
+        }
+
         public static Criteria Order(string propertyPath, OrderBy orderBy)
         {
             return new OrderCriteria()
             {
                 Member = EvaluatePath(propertyPath),
                 Ascending = orderBy == OrderBy.Ascending ? true : false
+            };
+        }
+
+        public static Criteria Skip(int amount)
+        {
+            return new SkipCriteria()
+            {
+                Value = amount
             };
         }
         #endregion
@@ -223,6 +248,12 @@ namespace Minimum.DataAccess
         internal override CriteriaType Type { get { return CriteriaType.Limit; } }
     }
 
+    internal class SkipCriteria : Criteria
+    {
+        internal int Value { get; set; }
+        internal override CriteriaType Type { get { return CriteriaType.Skip; } }
+    }
+
     internal class OrderCriteria : Criteria 
     {
         internal Criteria Member { get; set; }
@@ -231,8 +262,8 @@ namespace Minimum.DataAccess
     }
 
     internal enum CriteriaType
-    { Value, Member, Binary, Limit, Order }
+    { Value, Member, Binary, Limit, Skip, Order }
 
     internal enum BinaryOperand
-    { Equal, NotEqual, GreaterThan, GreaterEqualThan, LowerThan, LowerEqualThan, And, Or, Between, In }
+    { Equal, NotEqual, GreaterThan, GreaterEqualThan, LowerThan, LowerEqualThan, And, Or, Between, In, Like }
 }

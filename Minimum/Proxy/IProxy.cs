@@ -1,5 +1,5 @@
-﻿
-using System;
+﻿using System;
+
 namespace Minimum.Proxy
 {
     public interface IProxy

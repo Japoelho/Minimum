@@ -3,9 +3,9 @@ using System.Linq.Expressions;
 
 namespace Minimum.DataAccess
 {
-    internal static class Parser
+    internal static class CriteriaExpression
     {
-        internal static Criteria Criteria(Expression expression)
+        internal static Criteria MapCriteria(Expression expression)
         {
             if (expression == null) { return null; }
 
@@ -88,18 +88,29 @@ namespace Minimum.DataAccess
                                 return value;
                             }
                         }
+                        else
+                        {
+                            UnaryExpression unaryExpression = Expression.Convert((memberExpression as MemberExpression), typeof(object));
+                            Expression<Func<object>> delegateExpression = Expression.Lambda<Func<object>>(unaryExpression);
+                            Func<object> function = delegateExpression.Compile();
 
-                        return null;
+                            object memberValue = function();
+
+                            ValueCriteria value = new ValueCriteria()
+                            {
+                                Value = memberValue,
+                                ValueType = memberValue != null ? memberValue.GetType() : null
+                            };
+
+                            return value;
+                        }
                     }
                 case ExpressionType.Lambda:
                     {
                         return Parse((expression as LambdaExpression).Body);
                     }
-                //Not Implemented:
                 case ExpressionType.TypeIs:
-                //return this.VisitTypeIs((TypeBinaryExpression)exp);
                 case ExpressionType.Conditional:
-                    //return this.VisitConditional((ConditionalExpression)exp);
                     return null;
                 case ExpressionType.Call:
                     {
@@ -115,18 +126,12 @@ namespace Minimum.DataAccess
 
                         return criteria;
                     }
-                //return this.VisitMethodCall((MethodCallExpression)exp);
                 case ExpressionType.New:
-                //return this.VisitNew((NewExpression)exp);
                 case ExpressionType.NewArrayInit:
                 case ExpressionType.NewArrayBounds:
-                //return this.VisitNewArray((NewArrayExpression)exp);
                 case ExpressionType.Invoke:
-                //return this.VisitInvocation((InvocationExpression)exp);
                 case ExpressionType.MemberInit:
-                //return this.VisitMemberInit((MemberInitExpression)exp);
                 case ExpressionType.ListInit:
-                //return this.VisitListInit((ListInitExpression)exp);
                 case ExpressionType.Negate:
                 case ExpressionType.NegateChecked:
                 case ExpressionType.Not:
@@ -134,16 +139,6 @@ namespace Minimum.DataAccess
                 case ExpressionType.Convert:
                     {
                         Criteria criteria = Parse((expression as UnaryExpression).Operand);
-                        //if (criteria.GetType().Equals(typeof(ValueCriteria)))
-                        //{
-                        //    UnaryExpression unaryExpression = Expression.Convert((expression as UnaryExpression), typeof(object));
-                        //    Expression<Func<object>> delegateExpression = Expression.Lambda<Func<object>>(unaryExpression);
-                        //    Func<object> function = delegateExpression.Compile();
-
-                        //    object value = function();
-
-                        //    (criteria as ValueCriteria).Value = value;
-                        //}
 
                         return criteria;
                     }
@@ -151,7 +146,6 @@ namespace Minimum.DataAccess
                 case ExpressionType.ArrayLength:
                 case ExpressionType.Quote:
                 case ExpressionType.TypeAs:
-                //return this.ParseUnary((UnaryExpression)expression);
                 case ExpressionType.Add:
                 case ExpressionType.AddChecked:
                 case ExpressionType.Subtract:
@@ -176,7 +170,7 @@ namespace Minimum.DataAccess
         private static Criteria ParseBinary(BinaryExpression expression)
         {
             BinaryCriteria criteria = new BinaryCriteria();
-            criteria.UseBrackets = true; //TODO: Pensar?
+            criteria.UseBrackets = true;
             criteria.LeftValue = Parse(expression.Left);
             criteria.RightValue = Parse(expression.Right);
 
@@ -194,12 +188,6 @@ namespace Minimum.DataAccess
             }
 
             return criteria;
-        }
-
-        private static Expression ParseUnary(UnaryExpression expression)
-        {
-            //Expression operand = ParseUnary(expression.Operand);
-            return null;
         }
     }
 }

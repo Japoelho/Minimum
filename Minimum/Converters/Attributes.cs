@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace Minimum.XML.Mapping
+namespace Minimum.Serialization
 {
     public class Node : Attribute
     {
@@ -8,6 +8,14 @@ namespace Minimum.XML.Mapping
                 
         public Node(string name)
         { Name = name; }
+    }
+
+    public class XPath : Attribute
+    {
+        internal string Value { get; set; }
+
+        public XPath(string attribute)
+        { Value = attribute; }
     }
 
     public class IgnoreNode : Attribute { }
