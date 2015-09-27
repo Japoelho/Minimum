@@ -1,5 +1,4 @@
-﻿using Examples.Entities;
-using Minimum.Connection;
+﻿using Minimum.Connection;
 using Minimum.DataAccess;
 using System.Collections.Generic;
 
@@ -9,45 +8,68 @@ namespace Examples
     {
         static void Main(string[] args)
         {
-            /*************** Repository usage ***************/
+            #region [ Repository Usage Example ]
+            // - The Repository requires an IConnection which you can use a Minimum one or implement one yourself.
+            // - Using SQLite in this example.
+            SQLite sqliteConnection = new SQLite("App.data");
 
-            // - Create a new connection. You can create your own connections by inheriting the IConnection interface and implementing it.            
-            SQLite connection = new SQLite("App.data");            
+            Repository repository = new Repository(sqliteConnection);
+            
+            // - Selects ALL users from the database.
+            IList<User> users = repository.Select<User>();
+            
+            // - Selects only the user with it's [Identity] equal to 1.
+            User user = repository.Select<User>(1);
+            
+            // - Selects only the users which the company name is equal to "MyCompany".
+            IList<User> someUsers = repository.Select<User>(u => u.Company.Name == "MyCompany");
+            
+            // - Selects only the users which the company name is either "MyCompany" or "AnotherCompany" and their name is like %Daniichi%, ordered by name.
+            IList<User> fewUsers = repository.Select<User>(                    
+                    // - Using a list of criterias to give you more commands/control over queries.
+                    Criteria.Any(
+                        Criteria.EqualTo("Company.Name", "MyCompany"),
+                        Criteria.EqualTo("Company.Name", "AnotherCompany")
+                    ),
+                    Criteria.Like("Name", "%Daniichi%"),
+                    Criteria.Order("Name", OrderBy.Ascending)
+                );
+            
+            // - Returns the count of the users which the companyID is equal to 1.
+            long totalUsers = repository.Count<User>(u => u.CompanyID == 1);
+            
+            // - Update the user.
+            repository.Update<User>(user);            
 
-            // - Create the repository using the connection.
-            Repository repository = new Repository(connection);
+            // - Insert the user and set it's [Identity] property to the new inserted ID.
+            repository.Insert<User>(user);
 
-            // - Select all "Person" in the database.
-            IList<Person> persons = repository.Select<Person>();
+            // - Delete the user.
+            repository.Delete<User>(user);
+            #endregion
 
-            // - Select only one by it's [Identity] property.
-            Person someone = repository.Select<Person>(1);
+            #region [ Repository Usage Example ]
+            #endregion
 
-            // - Select a few based on a criteria.
-            IList<Person> group = repository.Select<Person>(p => p.Name == "Dave");
-
-            // - Update a record. This will be based on the [Identity] property.            
-            someone.Name = "Usagi";
-            repository.Update<Person>(someone);
-
-            // - Insert a new record. The [Identity] property will be updated.
-            Person newGuy = new Person();
-            newGuy.Name = "Trainee";
-            repository.Insert<Person>(newGuy); // - [Identity] of "newGuy" has been updated.
-
-            // - Delete a record. This will be based on the [Identity] property.
-            repository.Delete<Person>(newGuy);
-
-            /* Notes:
-             * - Check the Entities.cs file for more information on properties and actions.
-             * 
-             * - This Repository uses my AutoMapper class, which you can also implement your own with your own conventions.
-             *   This AutoMapper has been done using [Attribute] classes.
-             *   See the DataAccess\AutoMapper\AutoMapper.cs file for the example.
-             *   
-             * - You can also implement your own Repository if you want, or add new functions to the existing one.
-             *   Check the DataAccess\Repository.cs file for the example.
-             */
+            #region [ Repository Usage Example ]
+            #endregion
         }
+    }
+
+    [Table("Users")]
+    public class User
+    {
+        [Identity, Column("ROWID")] public int UserID { get; set; }
+        public string Name { get; set; }
+
+        public int CompanyID { get; set; }
+        [On("CompanyID", "ROWID")] public Company Company { get; set; }
+    }
+
+    [Table("Companies")]
+    public class Company
+    {
+        [Identity, Column("ROWID")] public int CompanyID { get; set; }
+        public string Name { get; set; }
     }
 }

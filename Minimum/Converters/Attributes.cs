@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace Minimum.Serialization
+namespace Minimum.XML.Mapping
 {
     public class Node : Attribute
     {

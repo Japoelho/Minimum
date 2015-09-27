@@ -21,6 +21,8 @@ namespace Minimum
 
         public static string RemoveNonNumeric(string source)
         {
+            if (source == null) { return null; }
+
             return Regex.Replace(source, "[^0-9]", "");
         }
 

@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
 
@@ -85,7 +86,7 @@ namespace Minimum.DataAccess
 
         public Relation Relation(string property)
         {
-            PropertyInfo propertyInfo = Type.GetProperty(property);
+            PropertyInfo propertyInfo = Type.GetProperties().FirstOrDefault(p => p.Name == property && p.DeclaringType == Type) ?? Type.GetProperty(property);
             if (propertyInfo == null) { return null; }
             //if (!propertyInfo.PropertyType.IsClass || propertyInfo.PropertyType.Equals(typeof(String)) || propertyInfo.PropertyType.Equals(typeof(Object))) { return null; }
 
@@ -110,12 +111,12 @@ namespace Minimum.DataAccess
 
     public class Property
     {
-        internal string ColumnName { get; private set; }
-        
-        internal bool IsIdentity { get; private set; }
+        public string ColumnName { get; private set; }
 
-        internal Type Type { get; private set; }
-        internal PropertyInfo PropertyInfo { get; private set; }
+        public bool IsIdentity { get; private set; }
+
+        public Type Type { get; private set; }
+        public PropertyInfo PropertyInfo { get; private set; }
 
         public Property(PropertyInfo propertyInfo)
         {
@@ -150,40 +151,40 @@ namespace Minimum.DataAccess
 
     public class Relation
     {
-        internal IMap JoinMap { get; private set; }
-        internal JoinType JoinType { get; private set; }
-        internal On[] On { get; private set; }
-        internal bool IsInheritance { get; private set; }
-        internal bool IsLazy { get; private set; }
-        internal bool IsCollection { get; private set; }
-        internal PropertyInfo PropertyInfo { get; private set; }
-        internal Type Type { get; private set; }
+        public IMap JoinMap { get; private set; }
+        public JoinType JoinType { get; private set; }
+        public On[] On { get; private set; }
+        public bool IsInheritance { get; private set; }
+        public bool IsLazy { get; private set; }
+        public bool IsCollection { get; private set; }
+        public PropertyInfo PropertyInfo { get; private set; }
+        public Type Type { get; private set; }
 
         public Relation()
         { }
 
-        internal Relation JoinWith(IMap map)
+        public Relation JoinWith(IMap map)
         {
             JoinMap = map;
 
             return this;
         }
 
-        internal Relation JoinAs(Join join)
+        public Relation JoinAs(Join join)
         {
             JoinType = join != null ? join.JoinType : JoinType.LeftJoin;
 
             return this;
         }
 
-        internal Relation JoinOn(On[] on)
+        public Relation JoinOn(On[] on)
         {
             On = on;
 
             return this;
         }
 
-        internal Relation Property(PropertyInfo propertyInfo)
+        public Relation Property(PropertyInfo propertyInfo)
         {
             Type = propertyInfo.PropertyType.IsGenericType ? propertyInfo.PropertyType.GetGenericArguments()[0] : propertyInfo.PropertyType;
             PropertyInfo = propertyInfo;
@@ -192,21 +193,21 @@ namespace Minimum.DataAccess
             return this;
         }
 
-        internal Relation Inherits(bool value = true)
+        public Relation Inherits(bool value = true)
         {
             IsInheritance = value;
 
             return this;
         }
 
-        internal Relation Lazy(Lazy lazy)
+        public Relation Lazy(Lazy lazy)
         {            
             IsLazy = lazy != null ? lazy.IsLazy : false;
 
             return this;
         }
 
-        internal Relation Lazy(bool value = true)
+        public Relation Lazy(bool value = true)
         {
             IsLazy = value;
 

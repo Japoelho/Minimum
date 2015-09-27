@@ -1,4 +1,5 @@
-﻿using Newtonsoft.Json;
+﻿using Minimum.XML.Mapping;
+using Newtonsoft.Json;
 using System;
 using System.Collections;
 using System.Collections.Generic;
@@ -7,7 +8,7 @@ using System.Reflection;
 using System.Xml.Linq;
 using System.Xml.XPath;
 
-namespace Minimum.Serialization
+namespace Minimum
 {
     public class Serializer
     {

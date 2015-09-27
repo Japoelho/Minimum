@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -47,7 +48,7 @@ namespace Minimum.DataAccess.Statement
 
             for (int i = 0; i < map.Relations.Count; i++)
             {
-                if (map.Relations[i].IsLazy)
+                if (map.Relations[i].IsCollection || map.Relations[i].IsLazy)
                 {
                     for (int j = 0; j < map.Relations[i].On.Length; j++)
                     {
@@ -81,7 +82,7 @@ namespace Minimum.DataAccess.Statement
 
             for (int i = 0; i < map.Relations.Count; i++)
             {
-                if (map.Relations[i].IsLazy) { continue; }
+                if (map.Relations[i].IsCollection || map.Relations[i].IsLazy) { continue; }
 
                 switch (map.Relations[i].JoinType)
                 {
@@ -140,14 +141,16 @@ namespace Minimum.DataAccess.Statement
         {
             StringBuilder queryString = new StringBuilder();
 
-            bool isWhere = true;
-            for (int i = 0; i < criterias.Count; i++)
-            {
-                if (criterias[i].Type == CriteriaType.Order || criterias[i].Type == CriteriaType.Limit) { continue; }
+            queryString.Append(EvaluateCriteria(new AllCriteria() { Criterias = criterias.ToArray() }, map, true, useAlias));
 
-                queryString.Append(EvaluateCriteria(criterias[i], map, isWhere, useAlias));
-                isWhere = false;
-            }
+            //bool isWhere = true;
+            //for (int i = 0; i < criterias.Count; i++)
+            //{
+            //    if (criterias[i].Type == CriteriaType.Order || criterias[i].Type == CriteriaType.Limit) { continue; }
+
+            //    queryString.Append(EvaluateCriteria(criterias[i], map, isWhere, useAlias));
+            //    isWhere = false;
+            //}
 
             return queryString.ToString();
         }
@@ -444,6 +447,15 @@ namespace Minimum.DataAccess.Statement
 
             switch (valueType.Name)
             {
+                //case "Byte[]":
+                //    {
+                //        string hexValue = value.ToString();
+                //        int length = hexValue.Length;
+                //        byte[] bytes = new byte[length / 2];
+                //        for (int i = 0; i < length; i += 2) { bytes[i / 2] = Convert.ToByte(hexValue.Substring(i, 2), 16); }
+
+                //        return bytes;
+                //    }
                 case "Guid":
                     {
                         return Guid.Parse(value.ToString());
@@ -472,10 +484,20 @@ namespace Minimum.DataAccess.Statement
 
             switch (valueType.Name)
             {
+                case "Byte[]": { return "0x" + BitConverter.ToString(value as byte[]).Replace("-", ""); }
                 case "Boolean":
                 case "bool": { return Convert.ToBoolean(value) ? "1" : "0"; }
                 case "Single":
                 case "Decimal": { return value.ToString().Replace(',', '.'); }
+                case "Int64[]":
+                case "Int32[]":
+                case "Int16[]":
+                    {
+                        string array = null;
+                        int[] values = value as int[];
+                        for (int i = 0; i < values.Length; i++) { array += array == null ? values[i].ToString() : ", " + values[i].ToString(); }
+                        return array;
+                    }
                 case "Int64":
                 case "Int32":
                 case "Int16":
@@ -490,13 +512,26 @@ namespace Minimum.DataAccess.Statement
             if (criteria == null) { return null; }
 
             StringBuilder condition = new StringBuilder();
-
+            
             switch (criteria.Type)
             {
                 case CriteriaType.Value:
                     {
                         if ((criteria as ValueCriteria).UseBrackets) { condition.Append("("); }
 
+                        //if ((criteria as ValueCriteria).Value.GetType().IsArray)
+                        //{
+                        //    IList list = (criteria as ValueCriteria).Value as IList;
+                        //    for (int i = 0; i < list.Count; i++)
+                        //    {
+                        //        if (i != 0) { condition.Append(", "); }
+                        //        condition.Append(FormatWriteValue(list[i], (criteria as ValueCriteria).ValueType.GetElementType()));
+                        //    }
+                        //}
+                        //else
+                        //{
+                        //    condition.Append(FormatWriteValue((criteria as ValueCriteria).Value, (criteria as ValueCriteria).ValueType));
+                        //}
                         condition.Append(FormatWriteValue((criteria as ValueCriteria).Value, (criteria as ValueCriteria).ValueType));
 
                         if ((criteria as ValueCriteria).UseBrackets) { condition.Append(")"); }
@@ -536,35 +571,68 @@ namespace Minimum.DataAccess.Statement
                         //if (property.IsAggregate) { condition.Append(property.Query.Alias + "_" + property.Name); }
                         ////condition.Append(currentTable.Alias + "." + property.Name);
                         //else { condition.Append(property.Query.Alias + "." + property.Name); }
-                        condition.Append(currentMap.Alias + "." + property.ColumnName);
+                        condition.Append(useAlias ? currentMap.Alias + "." + property.ColumnName : property.ColumnName);
                         break;
                     }
                 case CriteriaType.Binary:
                     {
+                        if (firstCriteria) { condition.Append(" WHERE "); firstCriteria = false; }
+
                         if ((criteria as BinaryCriteria).UseBrackets) { condition.Append("("); }
 
-                        condition.Append(EvaluateCriteria((criteria as BinaryCriteria).LeftValue, map, firstCriteria, useAlias));
-                        if (firstCriteria) { condition.Append(" WHERE "); firstCriteria = false; }
-                        else
+                        condition.Append(EvaluateCriteria((criteria as BinaryCriteria).LeftValue, map, firstCriteria, useAlias));                        
+                        switch ((criteria as BinaryCriteria).Operand)
                         {
-                            switch ((criteria as BinaryCriteria).Operand)
-                            {
-                                case BinaryOperand.Equal: { condition.Append(" = "); break; }
-                                case BinaryOperand.NotEqual: { condition.Append(" <> "); break; }
-                                case BinaryOperand.GreaterThan: { condition.Append(" > "); break; }
-                                case BinaryOperand.GreaterEqualThan: { condition.Append(" >= "); break; }
-                                case BinaryOperand.LowerThan: { condition.Append(" < "); break; }
-                                case BinaryOperand.LowerEqualThan: { condition.Append(" <= "); break; }
-                                case BinaryOperand.And: { condition.Append(" AND "); break; }
-                                case BinaryOperand.Or: { condition.Append(" OR "); break; }
-                                case BinaryOperand.In: { condition.Append(" IN "); break; }
-                                case BinaryOperand.Between: { condition.Append(" BETWEEN "); break; }
-                                case BinaryOperand.Like: { condition.Append(" LIKE "); break; }
-                            }
+                            case BinaryOperand.Equal: { condition.Append(" = "); break; }
+                            case BinaryOperand.NotEqual: { condition.Append(" <> "); break; }
+                            case BinaryOperand.GreaterThan: { condition.Append(" > "); break; }
+                            case BinaryOperand.GreaterEqualThan: { condition.Append(" >= "); break; }
+                            case BinaryOperand.LowerThan: { condition.Append(" < "); break; }
+                            case BinaryOperand.LowerEqualThan: { condition.Append(" <= "); break; }
+                            case BinaryOperand.And: { condition.Append(" AND "); break; }
+                            case BinaryOperand.Or: { condition.Append(" OR "); break; }
+                            case BinaryOperand.In: { condition.Append(" IN "); break; }
+                            case BinaryOperand.Between: { condition.Append(" BETWEEN "); break; }
+                            case BinaryOperand.Like: { condition.Append(" LIKE "); break; }
+                            case BinaryOperand.Is: { condition.Append(" IS "); break; }
                         }
                         condition.Append(EvaluateCriteria((criteria as BinaryCriteria).RightValue, map, firstCriteria, useAlias));
 
                         if ((criteria as BinaryCriteria).UseBrackets) { condition.Append(")"); }
+                        break;
+                    }
+                case CriteriaType.Any:
+                    {
+                        if ((criteria as AnyCriteria).Criterias == null || (criteria as AnyCriteria).Criterias.Length == 0) { break; }
+                        if ((criteria as AnyCriteria).UseBrackets) { condition.Append("("); }
+
+                        for (int i = 0; i < (criteria as AnyCriteria).Criterias.Length; i++)
+                        {
+                            if ((criteria as AnyCriteria).Criterias[i].Type == CriteriaType.Order || (criteria as AnyCriteria).Criterias[i].Type == CriteriaType.Limit || (criteria as AnyCriteria).Criterias[i].Type == CriteriaType.Skip) { continue; }
+                            if (firstCriteria) { condition.Append(" WHERE "); firstCriteria = false; }
+                            else if (i > 0) { condition.Append(" OR "); }
+
+                            condition.Append(EvaluateCriteria((criteria as AnyCriteria).Criterias[i], map, firstCriteria, useAlias));
+                        }
+
+                        if ((criteria as AnyCriteria).UseBrackets) { condition.Append(")"); }
+                        break;
+                    }
+                case CriteriaType.All:
+                    {
+                        if ((criteria as AllCriteria).Criterias == null || (criteria as AllCriteria).Criterias.Length == 0) { break; }
+                        if ((criteria as AllCriteria).UseBrackets) { condition.Append("("); }
+
+                        for (int i = 0; i < (criteria as AllCriteria).Criterias.Length; i++)
+                        {
+                            if ((criteria as AllCriteria).Criterias[i].Type == CriteriaType.Order || (criteria as AllCriteria).Criterias[i].Type == CriteriaType.Limit || (criteria as AllCriteria).Criterias[i].Type == CriteriaType.Skip) { continue; }
+                            if (firstCriteria) { condition.Append(" WHERE "); firstCriteria = false; }
+                            else if (i > 0) { condition.Append(" AND "); }
+
+                            condition.Append(EvaluateCriteria((criteria as AllCriteria).Criterias[i], map, firstCriteria, useAlias));
+                        }
+
+                        if ((criteria as AllCriteria).UseBrackets) { condition.Append(")"); }
                         break;
                     }
                 case CriteriaType.Order:
@@ -574,6 +642,10 @@ namespace Minimum.DataAccess.Statement
                         break;
                     }
                 case CriteriaType.Limit:
+                    {
+                        break;
+                    }
+                case CriteriaType.Skip:
                     {
                         break;
                     }

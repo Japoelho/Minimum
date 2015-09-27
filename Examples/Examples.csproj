@@ -42,11 +42,19 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="Entities.cs" />
+    <Compile Include="CodeReview.cs" />
     <Compile Include="Example.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup>
+    <ProjectReference Include="..\Minimum.SQLite\Minimum.SQLite.csproj">
+      <Project>{324b2b3f-4f91-4846-8dc7-61b8db212fac}</Project>
+      <Name>Minimum.SQLite</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\Minimum.WPF\Minimum.WPF.csproj">
+      <Project>{ad339ae9-1b8e-4670-963d-fee29f23f6ab}</Project>
+      <Name>Minimum.WPF</Name>
+    </ProjectReference>
     <ProjectReference Include="..\Minimum\Minimum.csproj">
       <Project>{45d731d1-f625-4dce-b074-c2a4394d3598}</Project>
       <Name>Minimum</Name>

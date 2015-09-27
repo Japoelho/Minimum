@@ -45,8 +45,8 @@ namespace Minimum.Proxy
             Type proxy = _proxyTypes.FirstOrDefault(p => p.BaseType == original);
             if (proxy != null) { return (IProxy)Activator.CreateInstance(proxy); }
 
-            string originalAssembly = original.Assembly.FullName.Substring(0, original.Assembly.FullName.IndexOf(','));
-            TypeBuilder typeBuilder = _moduleBuilder.DefineType(originalAssembly + "." + original.Name + "Proxy", TypeAttributes.Public | TypeAttributes.Class, original, new Type[] { typeof(IProxy) });
+            //string originalAssembly = original.Assembly.FullName.Substring(0, original.Assembly.FullName.IndexOf(','));
+            TypeBuilder typeBuilder = _moduleBuilder.DefineType(original.FullName + "Proxy", TypeAttributes.Public | TypeAttributes.Class, original, new Type[] { typeof(IProxy) });
 
             if (original.IsGenericType)
             {

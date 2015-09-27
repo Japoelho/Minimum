@@ -80,7 +80,27 @@ namespace Minimum.DataAccess
 
         public T Update<T>(T entity) where T : class
         {
-            Query<T> query = new Query<T>(_connection, _mapper.Map(typeof(T)));
+            Query<T> query = new Query<T>(_connection, _mapper.Map(typeof(T)));            
+
+            Property identity = query.Map.Properties.FirstOrDefault(p => p.IsIdentity);
+            if (identity == null) { throw new InvalidOperationException(String.Format(NoKeyDefined, typeof(T).Name)); }
+
+            return query.Where(Criteria.EqualTo(identity.PropertyInfo.Name, identity.PropertyInfo.GetValue(entity))).Update(entity);
+        }
+
+        public T Update<T>(T entity, params string[] properties) where T : class 
+        {
+            Query<T> query = new Query<T>(_connection, _mapper.Map(typeof(T), properties));
+
+            Property identity = query.Map.Properties.FirstOrDefault(p => p.IsIdentity);
+            if (identity == null) { throw new InvalidOperationException(String.Format(NoKeyDefined, typeof(T).Name)); }
+
+            return query.Where(Criteria.EqualTo(identity.PropertyInfo.Name, identity.PropertyInfo.GetValue(entity))).Update(entity);
+        }
+
+        public T Update<T>(T entity, params Expression<Func<T, object>>[] properties) where T : class
+        {
+            Query<T> query = new Query<T>(_connection, _mapper.Map(typeof(T), MapExpression.MapProperties(properties)));
 
             Property identity = query.Map.Properties.FirstOrDefault(p => p.IsIdentity);
             if (identity == null) { throw new InvalidOperationException(String.Format(NoKeyDefined, typeof(T).Name)); }
@@ -90,6 +110,7 @@ namespace Minimum.DataAccess
 
         public T Insert<T>(T entity) where T : class
         {
+            //Query<T> query = new Query<T>(_connection, _mapper.Map(typeof(T)));
             Query<T> query = new Query<T>(_connection, _mapper.Map(typeof(T)));
             
             return query.Insert(entity);
@@ -105,18 +126,11 @@ namespace Minimum.DataAccess
             return query.Where(Criteria.EqualTo(identity.PropertyInfo.Name, identity.PropertyInfo.GetValue(entity))).Delete(entity);
         }
 
-        public IList<T> Execute<T>(params object[] parameters) where T : class 
+        public IList<T> Execute<T>(string query) where T : class
         {
             Procedure<T> procedure = new Procedure<T>(_connection, _mapper.Map(typeof(T)));
 
-            return procedure.Execute(parameters);
-        }
-
-        public IList<T> ExecuteQuery<T>(string query) where T : class
-        {
-            Procedure<T> procedure = new Procedure<T>(_connection, _mapper.Map(typeof(T)));
-
-            return procedure.ExecuteQuery(query);
+            return procedure.Execute(query);
         }
 
         public int Execute(string query)

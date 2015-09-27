@@ -26,61 +26,7 @@ namespace Minimum.DataAccess
             _statement = connection.NewStatement();
         }
 
-        public IList<T> Execute(params object[] parameters)
-        {
-            IList<T> list = new List<T>();
-
-            using (DbConnection connection = _connection.NewConnection())
-            {
-                connection.Open();
-                
-                string query = Map.QueryText;
-                if (Text.Occurrences(query, '?') > parameters.Length && parameters.Length == 1)
-                {
-                    query = query.Replace("?", _statement.FormatWriteValue(parameters[0], parameters[0].GetType()));
-                }
-                else
-                {
-                    for (int i = 0; i < parameters.Length; i++)
-                    {
-                        query = Text.Replace(query, "?", _statement.FormatWriteValue(parameters[i], parameters[i].GetType()));
-                    }
-                }
-
-                DbCommand command = connection.CreateCommand();
-                command.CommandText = query;
-
-                using (IDataReader dataReader = command.ExecuteReader())
-                {
-                    while (dataReader.Read())
-                    {
-                        T entity = (T)Activator.CreateInstance(Map.Type);
-
-                        for (int i = 0; i < Map.Properties.Count; i++)
-                        {
-                            object dataValue = dataReader[Map.Properties[i].ColumnName];
-                            if (dataValue != DBNull.Value)
-                            {
-                                Map.Properties[i].PropertyInfo.SetValue(entity, _statement.FormatReadValue(dataValue, Map.Properties[i].PropertyInfo.PropertyType), null);
-                            }
-                        }
-
-                        list.Add(entity);
-                    }
-                }
-
-                for (int i = 0; i < list.Count; i++)
-                {
-                    Select(list[i], Map, connection);
-                }
-
-                connection.Close();
-            }
-
-            return list;
-        }
-
-        public IList<T> ExecuteQuery(string query)
+        public IList<T> Execute(string query)
         {
             IList<T> list = new List<T>();
 

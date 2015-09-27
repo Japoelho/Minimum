@@ -18,6 +18,20 @@ namespace Minimum.DataAccess
             return propertyInfo;
         }
 
+        public static string[] MapProperties(Expression[] expression)
+        {
+            if (expression == null) { return null; }
+
+            string[] properties = new string[expression.Length];
+
+            for (int i = 0; i < expression.Length; i++)
+            {
+                properties[i] = Parse(expression[i]).Name;
+            }
+
+            return properties;
+        }
+
         private static PropertyInfo Parse(Expression expression)
         {
             if (expression == null) { return null; }
@@ -34,6 +48,10 @@ namespace Minimum.DataAccess
                 case ExpressionType.Lambda:
                     {
                         return Parse((expression as LambdaExpression).Body);
+                    }
+                case ExpressionType.Convert:
+                    {
+                        return Parse((expression as UnaryExpression).Operand);
                     }
                 default:
                     throw new ArgumentException(UNSUPPORTED_EXPRESSION_TYPE);

@@ -1,5 +1,4 @@
 ﻿using Minimum.Loaders.WSQDecoder;
-using System;
 using System.Drawing;
 using System.Drawing.Imaging;
 using System.IO;
@@ -11,29 +10,29 @@ namespace Minimum
     {
         public class IMG
         {
-            public static byte[] ToJPG(string base64string)
+            public static byte[] ToJPG(byte[] image)
             {
-                return ConvertImage(base64string, ImageFormat.Jpeg);
+                return ConvertImage(image, ImageFormat.Jpeg);
             }
 
-            public static byte[] ToBMP(string base64string)
+            public static byte[] ToBMP(byte[] image)
             {
-                return ConvertImage(base64string, ImageFormat.Bmp);
+                return ConvertImage(image, ImageFormat.Bmp);
             }
 
-            public static byte[] ToPNG(string base64string)
+            public static byte[] ToPNG(byte[] image)
             {
-                return ConvertImage(base64string, ImageFormat.Png);
+                return ConvertImage(image, ImageFormat.Png);
             }
 
-            public static byte[] ToGIF(string base64string)
+            public static byte[] ToGIF(byte[] image)
             {
-                return ConvertImage(base64string, ImageFormat.Gif);
+                return ConvertImage(image, ImageFormat.Gif);
             }
 
-            private static byte[] ConvertImage(string base64string, ImageFormat imageFormat)
+            private static byte[] ConvertImage(byte[] image, ImageFormat imageFormat)
             {
-                using (MemoryStream stream = new MemoryStream(Convert.FromBase64String(base64string)))
+                using (MemoryStream stream = new MemoryStream(image))
                 {
                     MemoryStream converted = new MemoryStream();
                     Image.FromStream(stream).Save(converted, imageFormat);
@@ -45,30 +44,30 @@ namespace Minimum
 
         public class WSQ
         {
-            public static byte[] ToJPG(string base64string)
+            public static byte[] ToJPG(byte[] wsq)
             {
-                return ConvertImage(base64string, ImageFormat.Jpeg);
+                return ConvertImage(wsq, ImageFormat.Jpeg);
             }
 
-            public static byte[] ToBMP(string base64string)
+            public static byte[] ToBMP(byte[] wsq)
             {
-                return ConvertImage(base64string, ImageFormat.Bmp);
+                return ConvertImage(wsq, ImageFormat.Bmp);
             }
 
-            public static byte[] ToPNG(string base64string)
+            public static byte[] ToPNG(byte[] wsq)
             {
-                return ConvertImage(base64string, ImageFormat.Png);
+                return ConvertImage(wsq, ImageFormat.Png);
             }
 
-            public static byte[] ToGIF(string base64string)
+            public static byte[] ToGIF(byte[] wsq)
             {
-                return ConvertImage(base64string, ImageFormat.Gif);
+                return ConvertImage(wsq, ImageFormat.Gif);
             }
 
-            private static byte[] ConvertImage(string base64string, ImageFormat imageFormat)
+            private static byte[] ConvertImage(byte[] image, ImageFormat imageFormat)
             {
                 WSQDecoder decoder = new WSQDecoder();
-                Bitmap bitmap = decoder.Decode(Convert.FromBase64String(base64string));
+                Bitmap bitmap = decoder.Decode(image);
 
                 using (MemoryStream stream = new MemoryStream())
                 {

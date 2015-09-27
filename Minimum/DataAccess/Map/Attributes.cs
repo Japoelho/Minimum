@@ -5,9 +5,9 @@ namespace Minimum.DataAccess
     [AttributeUsage(AttributeTargets.Class | AttributeTargets.Property, AllowMultiple = false, Inherited = false)]
     public class Table : Attribute
     {
-        internal string Name { get; set; }
-        internal string Schema { get; set; }
-        internal string Database { get; set; }
+        public string Name { get; set; }
+        public string Schema { get; set; }
+        public string Database { get; set; }
 
         public Table(string name)
         {
@@ -31,7 +31,7 @@ namespace Minimum.DataAccess
     [AttributeUsage(AttributeTargets.Property, AllowMultiple = false, Inherited = false)]
     public class Column : Attribute
     {
-        internal string Name { get; set; }
+        public string Name { get; set; }
 
         public Column(string name)
         {
@@ -48,18 +48,18 @@ namespace Minimum.DataAccess
     [AttributeUsage(AttributeTargets.Property, AllowMultiple = false, Inherited = false)]
     public class Lazy : Attribute 
     {
-        internal virtual bool IsLazy { get { return true; } }
+        public virtual bool IsLazy { get { return true; } }
     }
 
     public class NoLazy : Lazy
     {
-        internal override bool IsLazy { get { return false; } }
+        public override bool IsLazy { get { return false; } }
     }
 
     [AttributeUsage(AttributeTargets.Class | AttributeTargets.Property, AllowMultiple = false, Inherited = false)]
     public class Join : Attribute
     {
-        internal JoinType JoinType { get; set; }
+        public JoinType JoinType { get; set; }
 
         public Join()
         {
@@ -80,8 +80,8 @@ namespace Minimum.DataAccess
     [AttributeUsage(AttributeTargets.Class | AttributeTargets.Property, AllowMultiple = true, Inherited = false)]
     public class On : Attribute
     {
-        internal string PrimaryKey { get; set; }
-        internal string ForeignKey { get; set; }
+        public string PrimaryKey { get; set; }
+        public string ForeignKey { get; set; }
 
         public On(string thisValue, string thatValue)
         {
@@ -93,7 +93,7 @@ namespace Minimum.DataAccess
     [AttributeUsage(AttributeTargets.Class | AttributeTargets.Property, AllowMultiple = true, Inherited = false)]
     public class Command : Attribute
     {
-        internal string Text { get; set; }
+        public string Text { get; set; }
 
         public Command(string text)
         {

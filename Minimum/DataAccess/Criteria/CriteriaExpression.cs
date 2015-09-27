@@ -9,9 +9,9 @@ namespace Minimum.DataAccess
         {
             if (expression == null) { return null; }
 
-            BinaryCriteria criteria = new BinaryCriteria();
-            criteria.Operand = BinaryOperand.And;
-            criteria.RightValue = Parse(expression);
+            AllCriteria criteria = new AllCriteria();
+            criteria.UseBrackets = false;
+            criteria.Criterias = new Criteria[] { Parse(expression) };
 
             return criteria;
         }
@@ -108,6 +108,13 @@ namespace Minimum.DataAccess
                 case ExpressionType.Lambda:
                     {
                         return Parse((expression as LambdaExpression).Body);
+                        //return new AllCriteria() 
+                        //{
+                        //    Criterias = new Criteria[] 
+                        //    { 
+                        //        Parse((expression as LambdaExpression).Body)
+                        //    }
+                        //};
                     }
                 case ExpressionType.TypeIs:
                 case ExpressionType.Conditional:
@@ -176,7 +183,16 @@ namespace Minimum.DataAccess
 
             switch (expression.NodeType)
             {
-                case ExpressionType.Equal: { criteria.Operand = BinaryOperand.Equal; break; }
+                case ExpressionType.Equal: 
+                    {
+                        if (criteria.RightValue.Type == CriteriaType.Value && (criteria.RightValue as ValueCriteria).Value == null)
+                        {
+                            criteria.Operand = BinaryOperand.Is;
+                            break;
+                        }
+                        criteria.Operand = BinaryOperand.Equal; 
+                        break; 
+                    }
                 case ExpressionType.NotEqual: { criteria.Operand = BinaryOperand.NotEqual; break; }
                 case ExpressionType.GreaterThan: { criteria.Operand = BinaryOperand.GreaterThan; break; }
                 case ExpressionType.GreaterThanOrEqual: { criteria.Operand = BinaryOperand.GreaterEqualThan; break; }
