@@ -1,10 +1,5 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.ServiceModel;
+﻿using System.ServiceModel;
 using System.ServiceModel.Channels;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace Minimum.Synchronizer.Service
 {
@@ -12,7 +7,7 @@ namespace Minimum.Synchronizer.Service
     public interface ISyncService
     {
         [OperationContract]
-        string Execute(string data);
+        string Sync(string data);
     }
 
     internal class SyncService : ClientBase<ISyncService>, ISyncService
@@ -27,9 +22,9 @@ namespace Minimum.Synchronizer.Service
 
         public SyncService(Binding binding, EndpointAddress remoteAddress) : base(binding, remoteAddress) { }
 
-        public string Execute(string data)
+        public string Sync(string data)
         {
-            return base.Channel.Execute(data);
+            return base.Channel.Sync(data);
         }
     }
 }

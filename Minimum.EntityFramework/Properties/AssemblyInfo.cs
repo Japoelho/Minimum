@@ -5,11 +5,11 @@ using System.Runtime.InteropServices;
 // General Information about an assembly is controlled through the following 
 // set of attributes. Change these attribute values to modify the information
 // associated with an assembly.
-[assembly: AssemblyTitle("Minimum")]
-[assembly: AssemblyDescription("Developer's Library")]
+[assembly: AssemblyTitle("Minimum.EntityFramework")]
+[assembly: AssemblyDescription("")]
 [assembly: AssemblyConfiguration("")]
 [assembly: AssemblyCompany("")]
-[assembly: AssemblyProduct("Minimum")]
+[assembly: AssemblyProduct("Minimum.EntityFramework")]
 [assembly: AssemblyCopyright("Copyright ©  2015")]
 [assembly: AssemblyTrademark("")]
 [assembly: AssemblyCulture("")]
@@ -20,7 +20,7 @@ using System.Runtime.InteropServices;
 [assembly: ComVisible(false)]
 
 // The following GUID is for the ID of the typelib if this project is exposed to COM
-[assembly: Guid("4ab90500-3e3f-47a6-8560-24f4625a8f69")]
+[assembly: Guid("856b2730-659c-4507-8ebc-bc27f8af5ad5")]
 
 // Version information for an assembly consists of the following four values:
 //

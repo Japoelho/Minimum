@@ -13,14 +13,13 @@ namespace Minimum.DataAccess
 {
     public class Procedure<T>
     {
+        public IMap _map;
         private IStatement _statement;
         private IConnection _connection;
 
-        public IMap Map { get; private set; }
-
         public Procedure(IConnection connection, IMap map)
         {            
-            Map = map;
+            _map = map;
             
             _connection = connection;
             _statement = connection.NewStatement();
@@ -41,14 +40,18 @@ namespace Minimum.DataAccess
                 {
                     while (dataReader.Read())
                     {
-                        T entity = (T)Activator.CreateInstance(Map.Type);
+                        T entity = (T)Activator.CreateInstance(_map.Type);
 
-                        for (int i = 0; i < Map.Properties.Count; i++)
+                        for (int i = 0; i < dataReader.FieldCount; i++)
                         {
-                            object dataValue = dataReader[Map.Properties[i].ColumnName];
+                            string column = dataReader.GetName(i);
+                            Property property = _map.Properties.FirstOrDefault(p => p.ColumnName == column);
+                            if (property == null) { continue; }
+
+                            object dataValue = dataReader[_map.Properties[i].ColumnName];
                             if (dataValue != DBNull.Value)
                             {
-                                Map.Properties[i].PropertyInfo.SetValue(entity, _statement.FormatReadValue(dataValue, Map.Properties[i].PropertyInfo.PropertyType), null);
+                                _map.Properties[i].PropertyInfo.SetValue(entity, _statement.FormatReadValue(dataValue, _map.Properties[i].PropertyInfo.PropertyType), null);
                             }
                         }
 
@@ -58,20 +61,53 @@ namespace Minimum.DataAccess
 
                 for (int i = 0; i < list.Count; i++)
                 {
-                    Select(list[i], Map, connection);
+                    Select(list[i], _map, connection);
                 }
 
-                connection.Close();
+                //connection.Close();
             }
 
             return list;
+        }
+
+        public int ExecuteScalar(string query)
+        {
+            int rows = 0;
+
+            using (DbConnection connection = _connection.NewConnection())
+            {
+                connection.Open();
+
+                DbCommand command = connection.CreateCommand();
+                command.CommandText = query;
+
+                object result = command.ExecuteScalar();
+
+                if (result != null && result != DBNull.Value)
+                {
+                    rows = Convert.ToInt32(result);
+                }
+
+                //connection.Close();
+            }
+
+            return rows;
         }
 
         private void Select(object entity, IMap map, DbConnection connection)
         {
             for (int i = 0; i < map.Relations.Count; i++)
             {
-                if (!map.Relations[i].IsCollection || map.Relations[i].IsLazy) { continue; }
+                if (map.Relations[i].IsLazy) { continue; }
+
+                if (!map.Relations[i].IsCollection)
+                {
+                    object property = map.Relations[i].IsInheritance ? entity : map.Relations[i].PropertyInfo.GetValue(entity);
+                    if (property == null) { continue; }
+
+                    Select(property, map.Relations[i].JoinMap, connection);
+                    continue;
+                }
 
                 Type listType = typeof(List<>).MakeGenericType(map.Relations[i].Type);
                 map.Relations[i].PropertyInfo.SetValue(entity, Activator.CreateInstance(listType));
@@ -139,11 +175,13 @@ namespace Minimum.DataAccess
 
         private object LoadObject(object entity, IMap map, IDataReader dataReader)
         {
+            bool isEmpty = true;
             for (int i = 0; i < map.Properties.Count; i++)
             {
                 object dataValue = dataReader[map.Alias + "_" + map.Properties[i].ColumnName];
                 if (dataValue != DBNull.Value)
                 {
+                    isEmpty = false;
                     map.Properties[i].PropertyInfo.SetValue(entity, _statement.FormatReadValue(dataValue, map.Properties[i].PropertyInfo.PropertyType), null);
                 }
             }
@@ -154,25 +192,31 @@ namespace Minimum.DataAccess
 
                 if (map.Relations[i].IsInheritance)
                 {
-                    LoadObject(entity, map.Relations[i].JoinMap, dataReader);
+                    if (LoadObject(entity, map.Relations[i].JoinMap, dataReader) != null) { isEmpty = false; }
                 }
                 else
                 {
-                    //if (dataReader[map.Relations[i].Query.Alias + "_" + map.Joins[i].On[0].ForeignKey] == DBNull.Value) { continue; }
-                    map.Relations[i].PropertyInfo.SetValue(entity, Load(map.Relations[i].JoinMap, dataReader));
+                    object property = Load(map.Relations[i].JoinMap, dataReader);
+                    if (property != null)
+                    {
+                        isEmpty = false;
+                        map.Relations[i].PropertyInfo.SetValue(entity, property);
+                    }
                 }
             }
 
-            return entity;
+            return isEmpty ? null : entity;
         }
 
         private object LoadProxy(object entity, IMap map, IDataReader dataReader)
         {
+            bool isEmpty = true;
             for (int i = 0; i < map.Properties.Count; i++)
             {
                 object dataValue = dataReader[map.Alias + "_" + map.Properties[i].ColumnName];
                 if (dataValue != DBNull.Value)
                 {
+                    isEmpty = false;
                     map.Properties[i].PropertyInfo.SetValue(entity, _statement.FormatReadValue(dataValue, map.Properties[i].PropertyInfo.PropertyType), null);
                 }
             }
@@ -183,7 +227,7 @@ namespace Minimum.DataAccess
 
                 if (map.Relations[i].IsInheritance)
                 {
-                    LoadProxy(entity, map.Relations[i].JoinMap, dataReader);
+                    if (LoadProxy(entity, map.Relations[i].JoinMap, dataReader) != null) { isEmpty = false; }
                 }
                 else if (map.Relations[i].IsLazy)
                 {
@@ -196,6 +240,19 @@ namespace Minimum.DataAccess
                         if (property == null) { throw new ArgumentException("Invalid On criteria for Join."); }
 
                         criterias.Add(Criteria.EqualTo(property.PropertyInfo.Name, joinWhere));
+                    }
+
+                    if (map.Relations[i].PropertyInfo.PropertyType.IsGenericType && map.Relations[i].PropertyInfo.PropertyType.GetGenericTypeDefinition() == typeof(LazyList<>))
+                    {
+                        Type genericType = typeof(Query<>).MakeGenericType(relation.Type);
+                        IQuery queryProxy = (IQuery)Activator.CreateInstance(genericType, _connection, relation.JoinMap);
+                        queryProxy.Where(criterias);
+
+                        Type listType = typeof(LazyList<>).MakeGenericType(relation.Type);
+                        object list = Activator.CreateInstance(listType, queryProxy);
+                        relation.PropertyInfo.SetValue(entity, list);
+
+                        continue;
                     }
 
                     (entity as IProxy).Add(relation.PropertyInfo.GetGetMethod().Name, (object instance, object[] iargs) =>
@@ -217,12 +274,16 @@ namespace Minimum.DataAccess
                 }
                 else
                 {
-                    //if (dataReader[map.Relations[i].Query.Alias + "_" + map.Joins[i].On[0].ForeignKey] == DBNull.Value) { continue; }
-                    map.Relations[i].PropertyInfo.SetValue(entity, Load(map.Relations[i].JoinMap, dataReader));
+                    object property = Load(map.Relations[i].JoinMap, dataReader);
+                    if (property != null)
+                    {
+                        isEmpty = false;
+                        map.Relations[i].PropertyInfo.SetValue(entity, property);
+                    }
                 }
             }
 
-            return entity;
+            return isEmpty ? null : entity;
         }
     }
 }

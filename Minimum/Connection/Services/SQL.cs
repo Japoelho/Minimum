@@ -65,7 +65,7 @@ namespace Minimum.Connection
                         }
                     }
 
-                    connection.Close();
+                    //connection.Close();
                 }
             }
             catch (Exception ex)

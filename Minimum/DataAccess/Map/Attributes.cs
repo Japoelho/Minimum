@@ -44,7 +44,10 @@ namespace Minimum.DataAccess
 
     [AttributeUsage(AttributeTargets.Property, AllowMultiple = false, Inherited = false)]
     public class Ignore : Attribute { }
-    
+
+    [AttributeUsage(AttributeTargets.Property, AllowMultiple = false, Inherited = false)]
+    public class Cascade : Attribute { }
+
     [AttributeUsage(AttributeTargets.Property, AllowMultiple = false, Inherited = false)]
     public class Lazy : Attribute 
     {

@@ -193,7 +193,16 @@ namespace Minimum.DataAccess
                         criteria.Operand = BinaryOperand.Equal; 
                         break; 
                     }
-                case ExpressionType.NotEqual: { criteria.Operand = BinaryOperand.NotEqual; break; }
+                case ExpressionType.NotEqual: 
+                    {
+                        if (criteria.RightValue.Type == CriteriaType.Value && (criteria.RightValue as ValueCriteria).Value == null)
+                        {
+                            criteria.Operand = BinaryOperand.IsNot;
+                            break;
+                        }
+                        criteria.Operand = BinaryOperand.NotEqual;
+                        break; 
+                    }
                 case ExpressionType.GreaterThan: { criteria.Operand = BinaryOperand.GreaterThan; break; }
                 case ExpressionType.GreaterThanOrEqual: { criteria.Operand = BinaryOperand.GreaterEqualThan; break; }
                 case ExpressionType.LessThan: { criteria.Operand = BinaryOperand.LowerThan; break; }

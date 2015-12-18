@@ -597,6 +597,7 @@ namespace Minimum.DataAccess.Statement
                             case BinaryOperand.Between: { condition.Append(" BETWEEN "); break; }
                             case BinaryOperand.Like: { condition.Append(" LIKE "); break; }
                             case BinaryOperand.Is: { condition.Append(" IS "); break; }
+                            case BinaryOperand.IsNot: { condition.Append(" IS NOT "); break; }
                         }
                         condition.Append(EvaluateCriteria((criteria as BinaryCriteria).RightValue, map, firstCriteria, useAlias));
 

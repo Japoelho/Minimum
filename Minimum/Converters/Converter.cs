@@ -68,7 +68,7 @@ namespace Minimum
             {
                 WSQDecoder decoder = new WSQDecoder();
                 Bitmap bitmap = decoder.Decode(image);
-
+                
                 using (MemoryStream stream = new MemoryStream())
                 {
                     bitmap.Save(stream, imageFormat);

@@ -1,7 +1,9 @@
 ﻿using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.ComponentModel.DataAnnotations;
 using System.Linq;
+using System.Reflection;
 using System.Text;
 
 namespace Minimum.DataAccess.Statement
@@ -297,14 +299,13 @@ namespace Minimum.DataAccess.Statement
             bool comma = false;
             for (int i = 0; i < map.Properties.Count; i++)
             {
+                if (map.Properties[i].IsIdentity && map.Properties[i].ColumnName == "ROWID") { continue; }
+
                 if (comma) { columns.Append(", "); }
                 columns.Append(map.Properties[i].ColumnName);
                 columns.Append(" ");
                 columns.Append(GetSQLType(map.Properties[i].Type));
-                if (map.Properties[i].IsIdentity)
-                { columns.Append(" PRIMARY KEY AUTOINCREMENT"); }
-                else
-                { columns.Append(" " + GetNullableType(map.Properties[i].Type)); }
+                columns.Append(" " + GetNullableType(map.Properties[i].PropertyInfo));
                 comma = true;
             }
 
@@ -325,10 +326,7 @@ namespace Minimum.DataAccess.Statement
         {
             StringBuilder exists = new StringBuilder();
 
-            exists.Append("IF EXISTS(SELECT * FROM INFORMATION_SCHEMA.TABLES ");
-            //exists.Append(query.Map.Name); TODO!
-            //WHERE TABLE_NAME = 'Alunos')  )
-            exists.Append("SELECT 1 AS EXIST ELSE SELECT 0 AS EXIST");
+            exists.Append("SELECT CASE WHEN name IS NOT NULL THEN 1 ELSE 0 END FROM sqlite_master WHERE type = 'table' AND name = '" + map.Name + "'");
 
             return exists.ToString();
         }
@@ -340,6 +338,8 @@ namespace Minimum.DataAccess.Statement
 
         private string GetSQLType(Type type)
         {
+            if (type.IsEnum) { return "INTEGER"; }
+
             switch (type.Name)
             {
                 case "Int16":
@@ -358,12 +358,16 @@ namespace Minimum.DataAccess.Statement
             }
         }
 
-        private string GetNullableType(Type type)
+        private string GetNullableType(PropertyInfo property)
         {
-            if (type.IsGenericType && type.GetGenericTypeDefinition() == typeof(Nullable<>))
+            if (Attribute.GetCustomAttribute(property, typeof(RequiredAttribute)) != null) { return "NOT NULL"; }
+
+            if (property.PropertyType.IsGenericType && property.PropertyType.GetGenericTypeDefinition() == typeof(Nullable<>))
             { return "NULL"; }
 
-            switch (type.Name)
+            if (property.PropertyType.IsEnum) { return "NOT NULL"; }
+
+            switch (property.PropertyType.Name)
             {
                 case "Int16":
                 case "Int32":
@@ -542,6 +546,7 @@ namespace Minimum.DataAccess.Statement
                             case BinaryOperand.Between: { condition.Append(" BETWEEN "); break; }
                             case BinaryOperand.Like: { condition.Append(" LIKE "); break; }
                             case BinaryOperand.Is: { condition.Append(" IS "); break; }
+                            case BinaryOperand.IsNot: { condition.Append(" IS NOT "); break; }
                         }
                         condition.Append(EvaluateCriteria((criteria as BinaryCriteria).RightValue, map, firstCriteria, useAlias));
 

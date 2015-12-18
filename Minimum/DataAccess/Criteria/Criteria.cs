@@ -33,8 +33,8 @@ namespace Minimum.DataAccess
             {
                 UseBrackets = true,
                 LeftValue = EvaluatePath(propertyPath),
-                Operand = BinaryOperand.Equal,
-                RightValue = new ValueCriteria() { Value = value, ValueType = value.GetType(), UseBrackets = false }
+                Operand = value == null ? BinaryOperand.Is : BinaryOperand.Equal,
+                RightValue = new ValueCriteria() { Value = value, ValueType = value == null ? typeof(string) : value.GetType(), UseBrackets = false }
             };
 
             //return new BinaryCriteria()
@@ -58,8 +58,8 @@ namespace Minimum.DataAccess
             {
                 UseBrackets = true,
                 LeftValue = EvaluatePath(propertyPath),
-                Operand = BinaryOperand.NotEqual,
-                RightValue = new ValueCriteria() { Value = value, ValueType = value.GetType(), UseBrackets = false }
+                Operand = value == null ? BinaryOperand.IsNot : BinaryOperand.NotEqual,
+                RightValue = new ValueCriteria() { Value = value, ValueType = value == null ? typeof(string) : value.GetType(), UseBrackets = false }
             };
 
             //return new BinaryCriteria()
@@ -375,5 +375,5 @@ namespace Minimum.DataAccess
     { Any, All, Value, Member, Binary, Limit, Skip, Order }
 
     public enum BinaryOperand
-    { Equal, NotEqual, GreaterThan, GreaterEqualThan, LowerThan, LowerEqualThan, And, Or, Between, In, Like, Is }
+    { Equal, NotEqual, GreaterThan, GreaterEqualThan, LowerThan, LowerEqualThan, And, Or, Between, In, Like, Is, IsNot }
 }

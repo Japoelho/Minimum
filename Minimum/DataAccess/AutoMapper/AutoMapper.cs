@@ -82,25 +82,19 @@ namespace Minimum.DataAccess
                     relation.Property(properties[i]);
 
                     IMap joinMap = Resolve(relation.Type, map) ?? Map(relation.Type, aliasFactory, map);
-                    
+
                     relation.JoinWith(joinMap);
                     relation.JoinAs(Attribute.GetCustomAttribute(properties[i], typeof(Join)) as Join);
                     relation.JoinOn(Attribute.GetCustomAttributes(properties[i], typeof(On)) as On[]);
                     relation.Lazy(Attribute.GetCustomAttribute(properties[i], typeof(Lazy)) as Lazy);
-                    
-                    Table joinTable = Attribute.GetCustomAttribute(properties[i], typeof(Table)) as Table;
-                    if (joinTable != null)
-                    {
-                        joinMap.ToTable(joinTable.Name);
-                        joinMap.ToSchema(joinTable.Schema);
-                        joinMap.ToDatabase(joinTable.Database);
-                    }
-                    
+                    relation.Cascade(Attribute.GetCustomAttribute(properties[i], typeof(Cascade)) != null);
+
                     continue;
                 }
                 
                 Property property = map.Property(properties[i].Name);
                 property.Identity(Attribute.GetCustomAttribute(properties[i], typeof(Identity)) != null);
+                property.Cascade(Attribute.GetCustomAttribute(properties[i], typeof(Cascade)) != null);
                 property.ToColumn(Attribute.GetCustomAttribute(properties[i], typeof(Column)) as Column);
             }
 
@@ -124,6 +118,8 @@ namespace Minimum.DataAccess
                     map.Relations[i].JoinOn(on);
                 }
 
+                //if (map.Relations[i].PropertyInfo.PropertyType.IsGenericType && map.Relations[i].PropertyInfo.PropertyType.GetGenericTypeDefinition() == typeof(LazyList<>))
+                //{ map.Relations[i].Lazy(false); }
                 if (map.Relations[i].PropertyInfo != null && Attribute.GetCustomAttribute(map.Relations[i].PropertyInfo, typeof(Lazy)) == null)
                 { map.Relations[i].Lazy(isCollection); }                
             }

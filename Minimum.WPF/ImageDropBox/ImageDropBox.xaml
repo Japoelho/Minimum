@@ -39,7 +39,10 @@
             </Style>
         </ResourceDictionary>
     </UserControl.Resources>
-    <Button Click="ImageClick">
-        <Image Name="ImageBlock" Source="{Binding ElementName=Root, Path=Source}" />
-    </Button>
+    <Grid>
+        <Button Click="ImageClick">
+            <Image Name="ImageBlock" Source="{Binding ElementName=Root, Path=Source}" />
+        </Button>
+        <Rectangle Name="Filter" Fill="Black" Opacity="0.5" Visibility="Collapsed" />
+    </Grid>
 </UserControl>

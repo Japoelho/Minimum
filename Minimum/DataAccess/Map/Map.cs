@@ -112,9 +112,8 @@ namespace Minimum.DataAccess
     public class Property
     {
         public string ColumnName { get; private set; }
-
         public bool IsIdentity { get; private set; }
-
+        public bool IsCascade { get; private set; }
         public Type Type { get; private set; }
         public PropertyInfo PropertyInfo { get; private set; }
 
@@ -147,6 +146,13 @@ namespace Minimum.DataAccess
 
             return this;
         }
+
+        public Property Cascade(bool value = true)
+        {
+            IsCascade = value;
+
+            return this;
+        }
     }
 
     public class Relation
@@ -157,6 +163,7 @@ namespace Minimum.DataAccess
         public bool IsInheritance { get; private set; }
         public bool IsLazy { get; private set; }
         public bool IsCollection { get; private set; }
+        public bool IsCascade { get; private set; }
         public PropertyInfo PropertyInfo { get; private set; }
         public Type Type { get; private set; }
 
@@ -210,6 +217,13 @@ namespace Minimum.DataAccess
         public Relation Lazy(bool value = true)
         {
             IsLazy = value;
+
+            return this;
+        }
+
+        public Relation Cascade(bool value = true)
+        {
+            IsCascade = value;
 
             return this;
         }

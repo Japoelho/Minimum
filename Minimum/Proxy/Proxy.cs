@@ -47,7 +47,7 @@ namespace Minimum.Proxy
 
             //string originalAssembly = original.Assembly.FullName.Substring(0, original.Assembly.FullName.IndexOf(','));
             TypeBuilder typeBuilder = _moduleBuilder.DefineType(original.FullName + "Proxy", TypeAttributes.Public | TypeAttributes.Class, original, new Type[] { typeof(IProxy) });
-
+            
             if (original.IsGenericType)
             {
                 Type[] genericArguments = original.GetGenericArguments();
@@ -74,9 +74,9 @@ namespace Minimum.Proxy
                     propertyBuilder.SetCustomAttribute(attributeBuilder);
                 }
             }
-                        
-            FieldBuilder _interceptor = ImplementIProxy(typeBuilder);
 
+            FieldBuilder _interceptor = ImplementIProxy(typeBuilder);
+            
             MethodAttributes attributes = MethodAttributes.Public | MethodAttributes.SpecialName | MethodAttributes.HideBySig | MethodAttributes.Virtual | MethodAttributes.Final;
             foreach (MethodInfo method in original.GetMethods(BindingFlags.Public | BindingFlags.Instance))
             {
@@ -94,7 +94,7 @@ namespace Minimum.Proxy
                 {
                     overrideMethod.SetCustomAttribute(CopyAttribute(attribute));
                 }
-
+                
                 if (method.ReturnType != typeof(void))
                 {
                     LocalBuilder args = getIL.DeclareLocal(typeof(Object[]));

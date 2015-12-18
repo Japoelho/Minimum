@@ -12,8 +12,7 @@ namespace Minimum.Synchronizer
     {
         string ErrorMessage { get; }
 
-        IList<T> GetRecords<T>(ref bool hasMore, params object[] parameters) where T : class;
-        bool SetRecord<T>(T record, bool isResponse, params object[] parameters) where T : class;        
-        Custom Action(Custom custom);
+        IList<T> GetRecords<T>(out bool hasMore, params object[] parameters) where T : class;
+        bool SetRecord<T>(T record, bool isResponse, params object[] parameters) where T : class;
     }
 }

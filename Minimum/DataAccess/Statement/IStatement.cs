@@ -13,6 +13,7 @@ namespace Minimum.DataAccess.Statement
 
         string Create(IMap map);
         string Drop(IMap map);
+        string Exists(IMap map);
         string GetInsertedID();
         object FormatReadValue(object value, Type type);
         string FormatWriteValue(object value, Type type);

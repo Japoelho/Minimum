@@ -17,7 +17,7 @@
     <SccLocalPath>SAK</SccLocalPath>
     <SccAuxPath>SAK</SccAuxPath>
     <SccProvider>SAK</SccProvider>
-    <NuGetPackageImportStamp>65b0e9ee</NuGetPackageImportStamp>
+    <NuGetPackageImportStamp>d1c1726b</NuGetPackageImportStamp>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
     <DebugSymbols>true</DebugSymbols>
@@ -81,6 +81,7 @@
     <Compile Include="DataAccess\Criteria\Criteria.cs" />
     <Compile Include="DataAccess\Criteria\CriteriaExpression.cs" />
     <Compile Include="DataAccess\AutoMapper\AutoMapper.cs" />
+    <Compile Include="DataAccess\LazyList\LazyList.cs" />
     <Compile Include="DataAccess\Map\IMap.cs" />
     <Compile Include="DataAccess\Map\Map.cs" />
     <Compile Include="DataAccess\Map\Attributes.cs" />
@@ -111,6 +112,7 @@
     <Compile Include="Synchronizer\Synchronizer.cs" />
     <Compile Include="Text\Text.cs" />
     <Compile Include="Util\Email.cs" />
+    <Compile Include="Util\Extensions.cs" />
     <Compile Include="Validation\IsCNPJ.cs" />
     <Compile Include="Validation\MinimumItems.cs" />
     <Compile Include="Validation\Validation.cs" />
@@ -120,6 +122,7 @@
   </ItemGroup>
   <ItemGroup>
     <Content Include="Javascript\Functions.js" />
+    <Content Include="Util.txt" />
   </ItemGroup>
   <ItemGroup />
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />

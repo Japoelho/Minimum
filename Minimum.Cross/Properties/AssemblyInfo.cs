@@ -5,11 +5,11 @@ using System.Runtime.InteropServices;
 // General Information about an assembly is controlled through the following 
 // set of attributes. Change these attribute values to modify the information
 // associated with an assembly.
-[assembly: AssemblyTitle("Minimum")]
-[assembly: AssemblyDescription("Developer's Library")]
+[assembly: AssemblyTitle("Minimum.Edge")]
+[assembly: AssemblyDescription("")]
 [assembly: AssemblyConfiguration("")]
 [assembly: AssemblyCompany("")]
-[assembly: AssemblyProduct("Minimum")]
+[assembly: AssemblyProduct("Minimum.Edge")]
 [assembly: AssemblyCopyright("Copyright ©  2015")]
 [assembly: AssemblyTrademark("")]
 [assembly: AssemblyCulture("")]
@@ -20,7 +20,7 @@ using System.Runtime.InteropServices;
 [assembly: ComVisible(false)]
 
 // The following GUID is for the ID of the typelib if this project is exposed to COM
-[assembly: Guid("4ab90500-3e3f-47a6-8560-24f4625a8f69")]
+[assembly: Guid("9f31f377-b265-4361-a3e3-c13c7e202d62")]
 
 // Version information for an assembly consists of the following four values:
 //

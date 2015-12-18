@@ -4,16 +4,13 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.ComponentModel;
-using System.Linq;
 using System.Reflection;
 using System.ServiceModel;
 using System.ServiceModel.Channels;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace Minimum.Synchronizer
 {
-    public class Synchronizer
+    public class Synchronizer : IDisposable
     {
         public Exception LastException { get; private set; }
         public ISynchronizer SyncWorker { private get; set; }
@@ -26,7 +23,7 @@ namespace Minimum.Synchronizer
 
         public Synchronizer()
         {
-            PacketMaxBufferSize = 1048576;
+            PacketMaxBufferSize = 3145728;
 
             _binding = new BasicHttpBinding() { SendTimeout = TimeSpan.FromMinutes(2), MaxReceivedMessageSize = PacketMaxBufferSize, MaxBufferSize = Convert.ToInt32(PacketMaxBufferSize) };
         }
@@ -47,7 +44,7 @@ namespace Minimum.Synchronizer
             {
                 if (_syncWorker != null && _syncWorker.CancellationPending) { return false; }
 
-                records = SyncWorker.GetRecords<T>(ref hasMore, parameters);
+                records = SyncWorker.GetRecords<T>(out hasMore, parameters);
 
                 if (records != null && records.Count > 0)
                 {
@@ -76,7 +73,7 @@ namespace Minimum.Synchronizer
 
                     newRecords = Request<T>(ref serverHasMore, parameters);
 
-                    if (newRecords == null) { break; }
+                    if (newRecords == null || newRecords.Count == 0 || newRecords[0] == null) { break; }
 
                     for (int i = 0; i < newRecords.Count; i++) { records.Add(newRecords[i]); }
                 }
@@ -110,7 +107,7 @@ namespace Minimum.Synchronizer
             _syncWorker = new BackgroundWorker();
             _syncWorker.DoWork += (s, e) =>
             {
-                e.Result = Synchronize<T>(reportProgress, parameters);
+                e.Result = Synchronize<T>(reportProgress, parameters);                
             };
             _syncWorker.ProgressChanged += (s, e) =>
             {
@@ -128,35 +125,6 @@ namespace Minimum.Synchronizer
         public void CancelAsync()
         {
             if (_syncWorker != null) { _syncWorker.CancelAsync(); }
-        }
-
-        public Custom Action(Custom custom)
-        {
-            Packet packet = new Packet();
-            packet.Type = PacketType.Custom;
-            packet.Data = Serializer.JSON.Load(custom);
-
-            Packet response = Send(packet);
-            if (response == null) { return null; }
-            if (response.Type == PacketType.Error) { LastException = new Exception(response.Data); return null; }
-
-            Custom received = Serializer.JSON.Load<Custom>(response.Data);
-
-            return received;
-        }
-
-        public void ActionAsync(Custom custom, Action<Custom> callback = null)
-        {
-            BackgroundWorker worker = new BackgroundWorker();
-            worker.DoWork += (s, e) =>
-            {
-                e.Result = Action(custom);
-            };
-            worker.RunWorkerCompleted += (s, e) =>
-            {
-                if (callback != null) { callback.Invoke(e.Result as Custom); }
-            };
-            worker.RunWorkerAsync();
         }
 
         #region [ Online ]
@@ -228,7 +196,7 @@ namespace Minimum.Synchronizer
 
             try
             {
-                receive = serviceProvider.Execute(send);
+                receive = serviceProvider.Sync(send);
             }
             catch (Exception ex)
             {
@@ -267,7 +235,7 @@ namespace Minimum.Synchronizer
         #endregion
 
         #region [ Server ]
-        public string Execute(string data)
+        public string Sync(string data)
         {
             Packet packet = null;
             try
@@ -383,45 +351,21 @@ namespace Minimum.Synchronizer
                         }
                         break;
                     }
-                case PacketType.Custom:                    
-                    {
-                        Custom custom = Serializer.JSON.Load<Custom>(packet.Data);
-
-                        if (SyncWorker == null)
-                        {
-                            packet.Type = PacketType.Error;
-                            packet.Data = "The service synchronization interface is not defined.";
-                            break;
-                        }
-
-                        Custom result = null;
-                        try
-                        {
-                            result = SyncWorker.Action(custom);                            
-                        }
-                        catch (Exception ex)
-                        {
-                            packet.Type = PacketType.Error;
-                            packet.Data = "The service synchronization interface threw an exception: " + ex.Message;
-                            break;
-                        }
-
-                        if (result == null)
-                        {
-                            packet.Type = PacketType.Error;
-                            packet.Data = SyncWorker.ErrorMessage;
-                        }
-                        else
-                        {
-                            packet.Type = PacketType.Success;
-                            packet.Data = Serializer.JSON.Load(result);
-                        }
-                        break;
-                    }
             }
 
             return Serializer.JSON.Load(packet);
         }
         #endregion
+
+        public void Dispose()
+        {
+            Dispose(true);
+            GC.SuppressFinalize(this);
+        }
+
+        protected virtual void Dispose(bool disposing)
+        {
+            if (disposing) { _syncWorker.Dispose(); }
+        }
     }
 }
