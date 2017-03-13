@@ -6,6 +6,7 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Data;
 using System.Data.Common;
+using System.Dynamic;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
@@ -15,7 +16,7 @@ namespace Minimum.DataAccess
     public class Query<T> : IQuery where T : class
     {
         private IStatement _statement;
-        private IConnection _connection;        
+        private IConnection _connection;
 
         public IMap Map { get; private set; }
         public IList<Criteria> Criterias { get; private set; }
@@ -107,11 +108,16 @@ namespace Minimum.DataAccess
                 IList<Criteria> criterias = new List<Criteria>();
                 for (int j = 0; j < map.Relations[i].On.Length; j++)
                 {
-                    object joinWhere = map.Properties.FirstOrDefault(p => p.ColumnName == map.Relations[i].On[j].ForeignKey).PropertyInfo.GetValue(entity);
+                    object joinWhere = map.Properties.FirstOrDefault(p => p.ColumnName == map.Relations[i].On[j].ForeignKey).GetValue(entity);
                     Property property = map.Relations[i].JoinMap.Properties.FirstOrDefault(p => p.ColumnName == map.Relations[i].On[j].PrimaryKey);
                     if (property == null) { throw new ArgumentException("Invalid On criteria for Join."); }
 
-                    criterias.Add(Criteria.EqualTo(property.PropertyInfo.Name, joinWhere));
+                    criterias.Add(Criteria.EqualTo(property.Name, joinWhere));
+                }
+
+                for (int j = 0; j < map.Relations[i].Order.Length; j++)
+                {
+                    criterias.Add(Criteria.Order(map.Relations[i].Order[j].Property, map.Relations[i].Order[j].OrderBy));
                 }
 
                 DbCommand command = connection.CreateCommand();
@@ -164,11 +170,11 @@ namespace Minimum.DataAccess
                 IList<Criteria> criterias = new List<Criteria>();
                 for (int j = 0; j < map.Relations[i].On.Length; j++)
                 {
-                    object joinWhere = map.Properties.FirstOrDefault(p => p.ColumnName == map.Relations[i].On[j].ForeignKey).PropertyInfo.GetValue(entity);
+                    object joinWhere = map.Properties.FirstOrDefault(p => p.ColumnName == map.Relations[i].On[j].ForeignKey).GetValue(entity);
                     Property property = map.Relations[i].JoinMap.Properties.FirstOrDefault(p => p.ColumnName == map.Relations[i].On[j].PrimaryKey);
                     if (property == null) { throw new ArgumentException("Invalid On criteria for Join."); }
 
-                    criterias.Add(Criteria.EqualTo(property.PropertyInfo.Name, joinWhere));
+                    criterias.Add(Criteria.EqualTo(property.Name, joinWhere));
                 }
 
                 DbCommand command = connection.CreateCommand();
@@ -186,7 +192,7 @@ namespace Minimum.DataAccess
 
                 Property identity = Map.Properties.FirstOrDefault(p => p.IsIdentity);
                 object identityID = Insert(entity, Map, connection);
-                if (identity != null) { identity.PropertyInfo.SetValue(entity, Convert.ChangeType(identityID, identity.Type)); }
+                if (identity != null) { identity.SetValue(entity, Convert.ChangeType(identityID, identity.Type)); }
 
                 DbCommand command = connection.CreateCommand();
                 command.CommandText = _statement.Insert(Map, entity);
@@ -196,7 +202,7 @@ namespace Minimum.DataAccess
                 command.CommandText = _statement.GetInsertedID();
                 identityID = command.ExecuteScalar();
 
-                if (identity != null && identityID != DBNull.Value) { identity.PropertyInfo.SetValue(entity, Convert.ChangeType(identityID, identity.Type)); }
+                if (identity != null && identityID != DBNull.Value) { identity.SetValue(entity, Convert.ChangeType(identityID, identity.Type)); }
 
                 //connection.Close();
             }
@@ -214,7 +220,7 @@ namespace Minimum.DataAccess
                                 
                 Property identity = Map.Properties.FirstOrDefault(p => p.IsIdentity);
                 identityID = Insert(entity, map.Relations[i].JoinMap, connection);
-                if (identity != null) { identity.PropertyInfo.SetValue(entity, Convert.ChangeType(identityID, identity.Type)); }
+                if (identity != null) { identity.SetValue(entity, Convert.ChangeType(identityID, identity.Type)); }
 
                 DbCommand command = connection.CreateCommand();
                 command.CommandText = _statement.Insert(Map.Relations[i].JoinMap, entity);
@@ -224,7 +230,7 @@ namespace Minimum.DataAccess
                 command.CommandText = _statement.GetInsertedID();
                 identityID = command.ExecuteScalar();
 
-                if (identity != null && identityID != DBNull.Value) { identity.PropertyInfo.SetValue(entity, Convert.ChangeType(identityID, identity.Type)); }
+                if (identity != null && identityID != DBNull.Value) { identity.SetValue(entity, Convert.ChangeType(identityID, identity.Type)); }
             }
 
             return identityID;
@@ -258,11 +264,11 @@ namespace Minimum.DataAccess
                 IList<Criteria> criterias = new List<Criteria>();
                 for (int j = 0; j < map.Relations[i].On.Length; j++)
                 {
-                    object joinWhere = map.Properties.FirstOrDefault(p => p.ColumnName == map.Relations[i].On[j].ForeignKey).PropertyInfo.GetValue(entity);
+                    object joinWhere = map.Properties.FirstOrDefault(p => p.ColumnName == map.Relations[i].On[j].ForeignKey).GetValue(entity);
                     Property property = map.Relations[i].JoinMap.Properties.FirstOrDefault(p => p.ColumnName == map.Relations[i].On[j].PrimaryKey);
                     if (property == null) { throw new ArgumentException("Invalid On criteria for Join."); }
 
-                    criterias.Add(Criteria.EqualTo(property.PropertyInfo.Name, joinWhere));
+                    criterias.Add(Criteria.EqualTo(property.Name, joinWhere));
                 }
 
                 DbCommand command = connection.CreateCommand();
@@ -309,7 +315,7 @@ namespace Minimum.DataAccess
         {
             for (int i = 0; i < map.Relations.Count; i++)
             {
-                if (map.Relations[i].IsInheritance)
+                if (!map.Relations[i].IsCollection)
                 {
                     Create(map.Relations[i].JoinMap, connection);
                 }
@@ -363,7 +369,12 @@ namespace Minimum.DataAccess
                 }
             }
 
-            if (useProxy)
+            if (map.IsDynamic)
+            {
+                dynamic entity = new ExpandoObject();
+                return LoadDynamic(entity, map, dataReader);
+            }
+            else if (useProxy)
             {
                 IProxy proxy = Proxies.GetInstance().GetProxy(map.Type);
                 return LoadProxy(proxy, map, dataReader);                
@@ -384,7 +395,7 @@ namespace Minimum.DataAccess
                 if (dataValue != DBNull.Value)
                 {
                     isEmpty = false;
-                    map.Properties[i].PropertyInfo.SetValue(entity, _statement.FormatReadValue(dataValue, map.Properties[i].PropertyInfo.PropertyType), null);
+                    map.Properties[i].SetValue(entity, _statement.FormatReadValue(dataValue, map.Properties[i].Type));
                 }
             }
 
@@ -419,7 +430,7 @@ namespace Minimum.DataAccess
                 if (dataValue != DBNull.Value)
                 {
                     isEmpty = false;
-                    map.Properties[i].PropertyInfo.SetValue(entity, _statement.FormatReadValue(dataValue, map.Properties[i].PropertyInfo.PropertyType), null);
+                    map.Properties[i].SetValue(entity, _statement.FormatReadValue(dataValue, map.Properties[i].Type));
                 }
             }
 
@@ -438,12 +449,20 @@ namespace Minimum.DataAccess
                     for (int j = 0; j < map.Relations[i].On.Length; j++)
                     {
                         object joinWhere = dataReader[map.Alias + "_" + map.Relations[i].On[j].ForeignKey];
+
+                        if (map.Relations[i].JoinMap.IsDynamic) { criterias.Add(Criteria.EqualTo(map.Relations[i].On[j].PrimaryKey, joinWhere)); continue; }
+                        
                         Property property = map.Relations[i].JoinMap.Properties.FirstOrDefault(p => p.ColumnName == map.Relations[i].On[j].PrimaryKey);
                         if (property == null) { throw new ArgumentException("Invalid On criteria for Join."); }
 
-                        criterias.Add(Criteria.EqualTo(property.PropertyInfo.Name, joinWhere));
+                        criterias.Add(Criteria.EqualTo(property.Name, joinWhere));
                     }
-                    
+
+                    for (int j = 0; j < map.Relations[i].Order.Length; j++)
+                    {
+                        criterias.Add(Criteria.Order(map.Relations[i].Order[j].Property, map.Relations[i].Order[j].OrderBy));
+                    }
+
                     if (map.Relations[i].PropertyInfo.PropertyType.IsGenericType && map.Relations[i].PropertyInfo.PropertyType.GetGenericTypeDefinition() == typeof(LazyList<>))
                     {
                         Type genericType = typeof(Query<>).MakeGenericType(relation.Type);
@@ -481,6 +500,43 @@ namespace Minimum.DataAccess
                     {
                         isEmpty = false;
                         map.Relations[i].PropertyInfo.SetValue(entity, property);
+                    }
+                }
+            }
+
+            return isEmpty ? null : entity;
+        }
+
+        private dynamic LoadDynamic(dynamic entity, IMap map, IDataReader dataReader)
+        {
+            IDictionary<String, object> container = entity as IDictionary<String, object>;
+
+            bool isEmpty = true;
+            for (int i = 0; i < dataReader.FieldCount; i++)
+            {
+                object dataValue = dataReader[i];
+                if (dataValue != DBNull.Value)
+                {
+                    isEmpty = false;
+                    container[dataReader.GetName(i)] = dataValue;
+                }
+            }
+
+            for (int i = 0; i < map.Relations.Count; i++)
+            {
+                if (map.Relations[i].IsCollection || map.Relations[i].IsLazy) { continue; }
+
+                if (map.Relations[i].IsInheritance)
+                {
+                    if (LoadDynamic(entity, map.Relations[i].JoinMap, dataReader) != null) { isEmpty = false; }
+                }
+                else
+                {
+                    object property = Load(map.Relations[i].JoinMap, dataReader);
+                    if (property != null)
+                    {
+                        isEmpty = false;
+                        container[map.Relations[i].PropertyInfo.Name] = property;
                     }
                 }
             }

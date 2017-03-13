@@ -29,6 +29,32 @@ namespace Minimum.DataAccess
     }
 
     [AttributeUsage(AttributeTargets.Property, AllowMultiple = false, Inherited = false)]
+    public class Dynamic : Attribute
+    {
+        public string Table { get; set; }
+        public string Schema { get; set; }
+        public string Database { get; set; }
+
+        public Dynamic(string table)
+        {
+            Table = table;
+        }
+
+        public Dynamic(string table, string schema)
+        {
+            Table = table;
+            Schema = schema;
+        }
+
+        public Dynamic(string table, string schema, string database)
+        {
+            Table = table;
+            Schema = schema;
+            Database = database;
+        }
+    }
+
+    [AttributeUsage(AttributeTargets.Property, AllowMultiple = false, Inherited = false)]
     public class Column : Attribute
     {
         public string Name { get; set; }
@@ -90,6 +116,19 @@ namespace Minimum.DataAccess
         {
             ForeignKey = thisValue;
             PrimaryKey = thatValue;
+        }
+    }
+
+    [AttributeUsage(AttributeTargets.Property, AllowMultiple = false, Inherited = false)]
+    public class Order : Attribute
+    {
+        public string Property { get; set; }
+        public OrderBy OrderBy { get; set; }
+
+        public Order(string property, OrderBy order)
+        {
+            Property = property;
+            OrderBy = order;
         }
     }
 

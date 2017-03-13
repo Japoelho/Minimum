@@ -41,7 +41,7 @@ namespace Minimum.DataAccess
                 case ExpressionType.MemberAccess:
                     {
                         MemberExpression memberExpression = (expression as MemberExpression);
-                        if (memberExpression.Expression.NodeType != ExpressionType.Parameter)  { throw new ArgumentException(INVALID_MEMBER_CALL); }
+                        if (memberExpression.Expression.NodeType != ExpressionType.Parameter) { throw new ArgumentException(INVALID_MEMBER_CALL); }
 
                         return memberExpression.Expression.Type.GetProperty(memberExpression.Member.Name);
                     }
@@ -56,6 +56,24 @@ namespace Minimum.DataAccess
                 default:
                     throw new ArgumentException(UNSUPPORTED_EXPRESSION_TYPE);
             }
+        }
+
+        public static string MapPropertyToStringPath(Expression expression)
+        {
+            string path = null;
+
+            if (expression.NodeType == ExpressionType.Lambda) { expression = (expression as LambdaExpression).Body; }
+            if (expression.NodeType == ExpressionType.Convert) { expression = (expression as UnaryExpression).Operand; }
+
+            do
+            {
+                path = path == null ? (expression as MemberExpression).Member.Name : (expression as MemberExpression).Member.Name + "." + path;
+
+                expression = (expression as MemberExpression).Expression;
+            }
+            while (expression.NodeType == ExpressionType.MemberAccess);
+
+            return path;
         }
     }
 }

@@ -1,293 +1,96 @@
-﻿/*--------------- [ AJAX FUNCTIONS ] ---------------*/
+﻿/*--------------- [ EFFECTS ] ---------------*/
 
-// - Calls the [url] link with the [postData] as JSON post string, and calls [callback] passing the JSON parsed response as parameter on success or no parameter on failure.
-function AjaxPost(url, postData, callback) {
-    var ajax = new XMLHttpRequest();
+// [onmouseover], [onmouseout]
+// - Fades in/out the text shadow of the [element] on mouse over/out over the [duration] in milliseconds, of the [colorArray].
+function textShadowFade(element, event, duration, colorArray) {
+    if (element.textShadowFadeAnimation) {
+        clearInterval(element.textShadowFadeAnimation);
+    }
 
-    ajax.onreadystatechange = function () {
-        if (ajax.readyState == 4) {
-            if (ajax.status == 200) {
-                var response = JSON.parse(ajax.responseText);
-
-                callback(response);
-            }
-            else {
-                callback();
-            }
+    if (!element.rgb) {
+        if (!element.onmouseover) {
+            var nevent = { type: "mouseover" };
+            element.onmouseover = function () { textShadowFade(element, nevent, duration, colorArray); }
         }
+
+        if (!element.onmouseout) {
+            var nevent = { type: "mouseout" };
+            element.onmouseout = function () { textShadowFade(element, nevent, duration, colorArray); }
+        }
+
+        element.radius = 3;
+
+        if (colorArray) {
+            element.textShadowFadeTargetRGB = colorArray;
+        }
+        else {
+            element.textShadowFadeTargetRGB = [0, 0, 0];
+        }
+
+        element.textShadowFadeRGB = [0, 0, 0];
+        element.textShadowFadeR = element.textShadowFadeTargetRGB[0] / (duration / 10);
+        element.textShadowFadeG = element.textShadowFadeTargetRGB[1] / (duration / 10);
+        element.textShadowFadeB = element.textShadowFadeTargetRGB[2] / (duration / 10);
     }
-
-    ajax.open("POST", url, true);
-    ajax.setRequestHeader('Content-Type', 'application/json');
-    ajax.send(JSON.stringify(postData));
-}
-
-/*--------------- [ INPUT EVENT FUNCTIONS ] ---------------*/
-
-// [onkeypress] [onpaste] 
-// - Returns true if the event is numeric or only numeric values.
-function isNumeric(event) {
-    switch (event.type) {
-        case "keypress":
-            {
-                var keyCode = event ? event.keyCode ? event.keyCode : event.which : window.event.keyCode ? window.event.keyCode : window.event.which;
-
-                if (keyCode == 8 || keyCode == 9 || keyCode == 13 || keyCode == 27 || keyCode == 37 || keyCode == 38 || keyCode == 39 || keyCode == 40) {
-                    return true;
-                }
-
-                if (isNaN(String.fromCharCode(keyCode))) {
-                    return false;
-                }
-                else {
-                    return true;
-                }
-            }
-        case "paste":
-            {
-                var pasteData = event ? event.clipboardData ? event.clipboardData.getData('text/plain') : "" : window.event.clipboardData ? window.event.clipboardData.getData('text/plain') : "";
-
-                if (isNaN(pasteData)) {
-                    return false;
-                }
-                else {
-                    return true;
-                }
-
-                if (event.preventDefault) {
-                    event.stopPropagation();
-                    event.preventDefault();
-                }
-                break;
-            }
-    }
-}
-
-// [onkeypress]
-// - Returns true if the event matches the regex pattern.
-function regexTest(event, pattern) {
-    var keyCode = event ? event.keyCode ? event.keyCode : event.which : window.event.keyCode ? window.event.keyCode : window.event.which;
-
-    if (keyCode == 8 || keyCode == 9 || keyCode == 13 || keyCode == 27 || keyCode == 37 || keyCode == 38 || keyCode == 39 || keyCode == 40) {
-        return true;
-    }
-
-    var regExp = new RegExp(pattern);
-    return regExp.test(String.fromCharCode(keyCode));
-}
-
-// [onkeypress] [onpaste]
-// - Returns the format value of the input by the specified pattern, ex. '000.000.000-00' or 'AA-000'
-function formatValue(input, event, pattern) {
-    switch (event.type) {
-        case "keypress":
-            {
-                var keyCode = event ? event.keyCode ? event.keyCode : event.which : window.event.keyCode ? window.event.keyCode : window.event.which;
-
-                if (keyCode == 8 || keyCode == 9 || keyCode == 13 || keyCode == 27 || keyCode == 37 || keyCode == 38 || keyCode == 39 || keyCode == 40) {
-                    return true;
-                }
-
-                while (true) {
-                    if (input.value.length >= pattern.length) {
-                        return false;
-                    }
-                    else if (/^[0-9]$/.test(pattern[input.value.length])) { //If numeric
-                        if (!isNaN(String.fromCharCode(keyCode))) {
-                            return true;
-                        }
-                        else {
-                            return false;
-                        }
-                    }
-                    else if (/^[a-zA-Z]$/.test(pattern[input.value.length])) { //If character only
-                        if (/^[a-zA-Z]$/.test(String.fromCharCode(keyCode))) {
-                            return true;
-                        }
-                        else {
-                            return false;
-                        }
-                    }
-                    else if (String.fromCharCode(keyCode) == pattern[input.value.length]) {
-                        return true;
-                    }
-                    else {
-                        input.value += pattern[input.value.length];
-                    }
-                }
-                break;
-            }
-        case "paste":
-            {
-                var pasteData = event ? event.clipboardData ? event.clipboardData.getData('text/plain') : "" : window.event.clipboardData ? window.event.clipboardData.getData('text/plain') : "";
-                for (var i = 0; i < pasteData.length; i++) {
-                    while (true) {
-                        if (input.value.length >= pattern.length) {
-                            break;
-                        }
-                        else if (/^[0-9]$/.test(pattern[input.value.length])) { //If numeric
-                            if (!isNaN(pasteData[i])) {
-                                input.value += pasteData[i];
-                                break;
-                            }
-                            else {
-                                break;
-                            }
-                        }
-                        else if (/^[a-zA-Z]$/.test(pattern[input.value.length])) { //If character only
-                            if (/^[a-zA-Z]$/.test(pasteData[i])) {
-                                input.value += pasteData[i];
-                                break;
-                            }
-                            else {
-                                break;
-                            }
-                        }
-                        else if (pasteData[i] == pattern[input.value.length]) {
-                            input.value += pasteData[i];
-                            break;
-                        }
-                        else {
-                            input.value += pattern[input.value.length];
-                        }
-                    }
-                }
-
-                if (event.preventDefault) {
-                    event.stopPropagation();
-                    event.preventDefault();
-                }
-                break;
-            }
-    }
-}
-
-// [onfocus] [onkeypress] [onpaste]
-// - Returns the format numeric value of the input by the specified pattern, ex. '0,00'
-function formatCurrency(input, event, pattern) {
-    if (!input.originalValue) { input.originalValue = ""; }
 
     switch (event.type) {
-        case "focus":
+        case "mouseover":
             {
-                if (input.value == "") {
-                    input.value = pattern;
-                }
+                element.textShadowFadeAnimation = setInterval(function () {
+                    if (element.textShadowFadeRGB[0] < element.textShadowFadeTargetRGB[0]) {
+                        element.textShadowFadeRGB[0] += element.textShadowFadeR;
+                    }
+                    if (element.textShadowFadeRGB[1] < element.textShadowFadeTargetRGB[1]) {
+                        element.textShadowFadeRGB[1] += element.textShadowFadeG;
+                    }
+                    if (element.textShadowFadeRGB[2] < element.textShadowFadeTargetRGB[2]) {
+                        element.textShadowFadeRGB[2] += element.textShadowFadeB;
+                    }
+
+                    element.style.textShadow = "2px 2px " + element.radius + "px rgb(" + (element.textShadowFadeRGB[0] | 0) + ", " + (element.textShadowFadeRGB[1] | 0) + ", " + (element.textShadowFadeRGB[2] | 0) + ")";
+
+                    if (element.textShadowFadeRGB[0] >= element.textShadowFadeTargetRGB[0] && element.textShadowFadeRGB[1] >= element.textShadowFadeTargetRGB[1] && element.textShadowFadeRGB[2] >= element.textShadowFadeTargetRGB[2]) {
+                        clearInterval(element.textShadowFadeAnimation);
+                    }
+                }, 10);
                 break;
             }
-        case "keypress":
+        case "mouseout":
             {
-                if (input.value == "") {
-                    input.value = pattern;
-                }
-
-                var keyCode = event ? event.keyCode ? event.keyCode : event.which : window.event.keyCode ? window.event.keyCode : window.event.which;
-
-                if (keyCode == 8 || keyCode == 9 || keyCode == 13 || keyCode == 27 || keyCode == 37 || keyCode == 38 || keyCode == 39 || keyCode == 40) {
-                    return true;
-                }
-
-                var value = String.fromCharCode(keyCode);
-
-                if (isNaN(value)) {
-                    return false;
-                }
-
-                input.originalValue = parseInt(input.value.replace(/\D/g, '') + value).toString();
-                input.formatValue = pattern;
-
-                var length = pattern.length;
-                var current = 0;
-                var offset = 0;
-
-                while (current < length) {
-                    if (current - offset >= input.originalValue.length) { break; }
-
-                    if (/^[0-9]$/.test(pattern[pattern.length - 1 - current])) {
-                        input.formatValue = replaceAt(input.formatValue, input.formatValue.length - 1 - current, input.originalValue[input.originalValue.length - 1 - current + offset]);
+                element.textShadowFadeAnimation = setInterval(function () {
+                    if (element.textShadowFadeRGB[0] > 0) {
+                        element.textShadowFadeRGB[0] -= element.textShadowFadeR;
                     }
-                    else {
-                        offset++;
+                    if (element.textShadowFadeRGB[1] > 0) {
+                        element.textShadowFadeRGB[1] -= element.textShadowFadeG;
+                    }
+                    if (element.textShadowFadeRGB[2] > 0) {
+                        element.textShadowFadeRGB[2] -= element.textShadowFadeB;
                     }
 
-                    current++;
-                }
+                    element.style.textShadow = "2px 2px " + element.radius + "px rgb(" + (element.textShadowFadeRGB[0] | 0) + ", " + (element.textShadowFadeRGB[1] | 0) + ", " + (element.textShadowFadeRGB[2] | 0) + ")";
 
-                if (input.originalValue.length + offset > length) {
-                    for (var i = input.originalValue.length - 1 - current + offset; i >= 0; i--) {
-                        input.formatValue = input.originalValue[i] + input.formatValue;
+                    if (element.textShadowFadeRGB[0] <= 0 && element.textShadowFadeRGB[1] <= 0 && element.textShadowFadeRGB[2] <= 0) {
+                        clearInterval(element.textShadowFadeAnimation);
                     }
-                }
-
-                input.value = input.formatValue;
-                return false;
-            }
-        case "paste":
-            {
-                var pasteData = event ? event.clipboardData ? event.clipboardData.getData('text/plain') : "" : window.event.clipboardData ? window.event.clipboardData.getData('text/plain') : "";
-                if (isNaN(pasteData)) {
-                    if (event.preventDefault) {
-                        event.stopPropagation();
-                        event.preventDefault();
-                    }
-                    return false;
-                }
-
-                input.originalValue = pasteData;
-                input.formatValue = pattern;
-
-                var length = pattern.length;
-                var current = 0;
-                var offset = 0;
-
-                while (current < length) {
-                    if (current - offset >= input.originalValue.length) { break; }
-
-                    if (/^[0-9]$/.test(pattern[pattern.length - 1 - current])) {
-                        input.formatValue = replaceAt(input.formatValue, input.formatValue.length - 1 - current, input.originalValue[input.originalValue.length - 1 - current + offset]);
-                    }
-                    else {
-                        offset++;
-                    }
-
-                    current++;
-                }
-
-                if (input.originalValue.length + offset > length) {
-                    for (var i = input.originalValue.length - 1 - current + offset; i >= 0; i--) {
-                        input.formatValue = input.originalValue[i] + input.formatValue;
-                    }
-                }
-
-                input.value = input.formatValue;
-
-                if (event.preventDefault) {
-                    event.stopPropagation();
-                    event.preventDefault();
-                }
+                }, 10);
                 break;
             }
     }
 }
 
-/*--------------- [ TEXT FUNCTIONS ] ---------------*/
-
-// - Removes leading spaces from the string value.
-function trim(value) {
-    return value.replace(/^\s+|\s+$/g, "");
-}
-
-// - Replaces the character at the specific index of the original string.
-function replaceAt(original, index, character) {
-    return original.substr(0, index) + character + original.substr(index + character.length)
-}
-
-/*--------------- [ SCREEN EFFECTS ] ---------------*/
-
-// - Creates a semi-transparent layer of the [scripts-background] CSS class, removes the layer if [removeOnClick] is set to true, and calls [onRemove] if specified.
+// - Returns a semi-transparent layer, removes the layer when clicked if [removeOnClick] is set to true, and calls [onRemove] if specified.
 function backgroundMask(removeOnClick, onRemove) {
     var background = document.createElement("div");
-    background.className = "scripts-background";
+
+    background.style.position = "fixed";
+    background.style.top = "0px";
+    background.style.bottom = "0px";
+    background.style.left = "0px";
+    background.style.right = "0px";
+    background.style.backgroundColor = "black";
+    background.style.opacity = "0.5";
+    background.style.filter = "alpha(opacity = 50)";
 
     if (removeOnClick) {
         background.onclick = function () {
@@ -302,219 +105,801 @@ function backgroundMask(removeOnClick, onRemove) {
     return background;
 }
 
-/*--------------- [ ELEMENT FUNCTIONS ] ---------------*/
-
-// - Returns the next element (sibling in hierarchical order) after N matches.
-function nextElement(object, matches) {
-    var countMatch = 0;
-    if (matches) { countMatch = parseInt(matches); }
-
-    var nextObject = object;
-    while (nextObject = nextObject.nextSibling) {
-        if (nextObject.nodeType == 1) {
-            if (countMatch == 0) {
-                return nextObject;
-            }
-            else {
-                countMatch--;
-            }
-        }
+// - Returns the RGB value of a [color] hexadecimal value.
+function colorHexToRgb(color) {
+    var r, g, b;
+    if (color.charAt(0) == '#') {
+        color = color.substr(1);
     }
+    r = color.charAt(0) + color.charAt(1);
+    g = color.charAt(2) + color.charAt(3);
+    b = color.charAt(4) + color.charAt(5);
+    r = parseInt(r, 16);
+    g = parseInt(g, 16);
+    b = parseInt(b, 16);
+    return "rgb(" + r + "," + g + "," + b + ")";
 }
 
-// - Returns the previous element (sibling in hierarchical order) after N matches.
-function prevElement(object, matches) {
-    var countMatch = 0;
-    if (matches) { countMatch = parseInt(matches); }
+// - Returns the hexadecimal value of a [color] name.
+function colorNameToHex(color) {
+    var colors = {
+        "aliceblue": "#f0f8ff",
+        "antiquewhite": "#faebd7",
+        "aqua": "#00ffff",
+        "aquamarine": "#7fffd4",
+        "azure": "#f0ffff",
+        "beige": "#f5f5dc",
+        "bisque": "#ffe4c4",
+        "black": "#000000",
+        "blanchedalmond": "#ffebcd",
+        "blue": "#0000ff",
+        "blueviolet": "#8a2be2",
+        "brown": "#a52a2a",
+        "burlywood": "#deb887",
+        "cadetblue": "#5f9ea0",
+        "chartreuse": "#7fff00",
+        "chocolate": "#d2691e",
+        "coral": "#ff7f50",
+        "cornflowerblue": "#6495ed",
+        "cornsilk": "#fff8dc",
+        "crimson": "#dc143c",
+        "cyan": "#00ffff",
+        "darkblue": "#00008b",
+        "darkcyan": "#008b8b",
+        "darkgoldenrod": "#b8860b",
+        "darkgray": "#a9a9a9",
+        "darkgreen": "#006400",
+        "darkkhaki": "#bdb76b",
+        "darkmagenta": "#8b008b",
+        "darkolivegreen": "#556b2f",
+        "darkorange": "#ff8c00",
+        "darkorchid": "#9932cc",
+        "darkred": "#8b0000",
+        "darksalmon": "#e9967a",
+        "darkseagreen": "#8fbc8f",
+        "darkslateblue": "#483d8b",
+        "darkslategray": "#2f4f4f",
+        "darkturquoise": "#00ced1",
+        "darkviolet": "#9400d3",
+        "deeppink": "#ff1493",
+        "deepskyblue": "#00bfff",
+        "dimgray": "#696969",
+        "dodgerblue": "#1e90ff",
+        "firebrick": "#b22222",
+        "floralwhite": "#fffaf0",
+        "forestgreen": "#228b22",
+        "fuchsia": "#ff00ff",
+        "gainsboro": "#dcdcdc",
+        "ghostwhite": "#f8f8ff",
+        "gold": "#ffd700",
+        "goldenrod": "#daa520",
+        "gray": "#808080",
+        "green": "#008000",
+        "greenyellow": "#adff2f",
+        "honeydew": "#f0fff0",
+        "hotpink": "#ff69b4",
+        "indianred ": "#cd5c5c",
+        "indigo": "#4b0082",
+        "ivory": "#fffff0",
+        "khaki": "#f0e68c",
+        "lavender": "#e6e6fa",
+        "lavenderblush": "#fff0f5",
+        "lawngreen": "#7cfc00",
+        "lemonchiffon": "#fffacd",
+        "lightblue": "#add8e6",
+        "lightcoral": "#f08080",
+        "lightcyan": "#e0ffff",
+        "lightgoldenrodyellow": "#fafad2",
+        "lightgrey": "#d3d3d3",
+        "lightgreen": "#90ee90",
+        "lightpink": "#ffb6c1",
+        "lightsalmon": "#ffa07a",
+        "lightseagreen": "#20b2aa",
+        "lightskyblue": "#87cefa",
+        "lightslategray": "#778899",
+        "lightsteelblue": "#b0c4de",
+        "lightyellow": "#ffffe0",
+        "lime": "#00ff00",
+        "limegreen": "#32cd32",
+        "linen": "#faf0e6",
+        "magenta": "#ff00ff",
+        "maroon": "#800000",
+        "mediumaquamarine": "#66cdaa",
+        "mediumblue": "#0000cd",
+        "mediumorchid": "#ba55d3",
+        "mediumpurple": "#9370d8",
+        "mediumseagreen": "#3cb371",
+        "mediumslateblue": "#7b68ee",
+        "mediumspringgreen": "#00fa9a",
+        "mediumturquoise": "#48d1cc",
+        "mediumvioletred": "#c71585",
+        "midnightblue": "#191970",
+        "mintcream": "#f5fffa",
+        "mistyrose": "#ffe4e1",
+        "moccasin": "#ffe4b5",
+        "navajowhite": "#ffdead",
+        "navy": "#000080",
+        "oldlace": "#fdf5e6",
+        "olive": "#808000",
+        "olivedrab": "#6b8e23",
+        "orange": "#ffa500",
+        "orangered": "#ff4500",
+        "orchid": "#da70d6",
+        "palegoldenrod": "#eee8aa",
+        "palegreen": "#98fb98",
+        "paleturquoise": "#afeeee",
+        "palevioletred": "#d87093",
+        "papayawhip": "#ffefd5",
+        "peachpuff": "#ffdab9",
+        "peru": "#cd853f",
+        "pink": "#ffc0cb",
+        "plum": "#dda0dd",
+        "powderblue": "#b0e0e6",
+        "purple": "#800080",
+        "red": "#ff0000",
+        "rosybrown": "#bc8f8f",
+        "royalblue": "#4169e1",
+        "saddlebrown": "#8b4513",
+        "salmon": "#fa8072",
+        "sandybrown": "#f4a460",
+        "seagreen": "#2e8b57",
+        "seashell": "#fff5ee",
+        "sienna": "#a0522d",
+        "silver": "#c0c0c0",
+        "skyblue": "#87ceeb",
+        "slateblue": "#6a5acd",
+        "slategray": "#708090",
+        "snow": "#fffafa",
+        "springgreen": "#00ff7f",
+        "steelblue": "#4682b4",
+        "tan": "#d2b48c",
+        "teal": "#008080",
+        "thistle": "#d8bfd8",
+        "tomato": "#ff6347",
+        "turquoise": "#40e0d0",
+        "violet": "#ee82ee",
+        "wheat": "#f5deb3",
+        "white": "#ffffff",
+        "whitesmoke": "#f5f5f5",
+        "yellow": "#ffff00",
+        "yellowgreen": "#9acd32"
+    };
 
-    var prevObject = object;
-    while (prevObject = prevObject.previousSibling) {
-        if (prevObject.nodeType == 1) {
-            if (countMatch == 0) {
-                return prevObject;
-            }
-            else {
-                countMatch--;
-            }
-        }
-    }
-}
+    if (typeof colors[color.toLowerCase()] != "undefined") return colors[color.toLowerCase()];
 
-// - Returns the first parent with the specified [parentID].
-function findParentByID(object, parentID) {
-    while (object = object.parentNode) {
-        if (object.id == parentID) {
-            return object;
-        }
-    }
     return false;
 }
 
-// - Returns the first parent by element name after N matches.
-function findParent(object, parentName, matches) {
-    var countMatch = 0;
-    if (matches) { countMatch = parseInt(matches); }
-    while (object = object.parentNode) {
-        if (object.nodeName.toUpperCase() == parentName) {
-            if (countMatch == 0) {
-                return object;
-            }
-            else {
-                countMatch--;
-            }
+/*--------------- [ URL FUNCTIONS ] ---------------*/
+
+(function (url) {
+    // - Returns the root URL.
+    url.root = function () {
+        return window.location.origin ? window.location.origin + "/" : window.location.protocol + "//" + window.location.host + "/";
+    };
+
+    // - Returns the base URL.
+    url.base = function () {
+        return new RegExp(/^.*\//).exec(window.location.href);
+    };
+})(window.url = window.url || {});
+
+/*--------------- [ INPUT EVENT FUNCTIONS ] ---------------*/
+
+(function (input) {
+    // - Returns true if the [event] keyCode is numeric or only numeric values.
+    input.onlyNumeric = function (event) {
+        event = event || window.event;
+        switch (event.type) {
+            case "keypress":
+                {
+                    var keyCode = event.which || event.keyCode;
+                    if (input.isNotValue(keyCode)) {
+                        return true;
+                    }
+
+                    return !isNaN(String.fromCharCode(keyCode));
+                }
+            case "paste":
+                {
+                    var pasteData = event ? event.clipboardData ? event.clipboardData.getData('text/plain') : "" : window.event.clipboardData ? window.event.clipboardData.getData('text/plain') : "";
+
+                    //if (event.preventDefault) {
+                    //    event.stopPropagation();
+                    //    event.preventDefault();
+                    //}
+
+                    return !isNaN(pasteData);
+                }
         }
-    }
-    return false;
-}
+    };
 
-// - Returns the first child (recursively) by element name after N matches.
-function findChild(object, childName, matches) {
-    var countMatch = 0;
-    if (matches) { countMatch = parseInt(matches); }
-    for (var i = 0; i < object.childNodes.length; i++) {
-        if (object.childNodes[i].nodeType == 1) {
-            if (object.childNodes[i].nodeName.toUpperCase() == childName) {
-                if (countMatch == 0) {
-                    return object.childNodes[i];
-                }
-                else {
-                    countMatch--;
-                }
-            }
+    // - Returns true if the [event] keyCode matches the regex [pattern].
+    input.matchRegex = function (event, pattern) {
+        event = event || window.event;
+        var keyCode = event.which || event.keyCode;
 
-            if (object.childNodes[i].hasChildNodes()) {
-                var child = findChild(object.childNodes[i], childName, countMatch);
-                if (child) {
-                    return child;
-                }
-            }
+        if (input.isNotValue(keyCode)) {
+            return true;
         }
-    }
 
-    return false;
-}
+        var regex = new RegExp(pattern);
+        return regExp.test(String.fromCharCode(keyCode));
+    };
 
-// - Returns an array[2] of the position X and Y on screen of the object.
-function findPosition(object) {
-    var posLeft = posTop = 0;
-    if (object.offsetParent) {
-        do {
-            posLeft += object.offsetLeft;
-            posTop += object.offsetTop;
-        } while (object = object.offsetParent);
-    }
-    return [posLeft, posTop];
-}
+    // - Formats the [element] value if possible and returns true if the [element] value matches the format of [pattern].
+    input.formatValue = function (element, event, pattern) {
+        event = event || window.event;
 
-/*--------------- [ VALIDATION FUNCTIONS ] ---------------*/
+        if (!element.oninput) {
+            element.oninput = function () {
+                var value = element.value.replace(/[^\w]/g, '');
 
-// [onsubmit]
-// - Validates the form and returns true if valid. This function calls [validateField] on all it's inputs. Optional attributes:
-// [preSubmit]: Calls a function before the submit.
-function validateForm(formObject) {
-    var errorCount = 0;
-    for (var i = 0; i < formObject.length; i++) {
-        errorCount += validateField(formObject[i]) ? 0 : 1;
-    }
-
-    if (errorCount == 0 && formObject.getAttribute("preSubmit") != null) {
-        eval(formObject.getAttribute("preSubmit"));
-    }
-
-    return errorCount > 0 ? false : true;
-}
-
-// [any event]
-// - Validates the input and returns true if valid. Optional attributes:
-// [required]: Specifies that the field requires a value.
-// [min-length]: Specifies the minimum length of the value.
-// [max-length]: Specifies the maximum length of the value.
-// [test]: Tests the value against the specified regex pattern.
-// [onvalidation]: Calls the specified function (expects a return) for custom validation.
-// [on-correct]: Calls the specified function if the field is valid.
-// [on-error]: Calls the specified function if the field is invalid.
-function validateField(input) {
-    switch (input.type.toUpperCase()) {
-        case "CHECKBOX":
-            {
-                if (input.getAttribute("required") != null && input.checked == false) {
-                    fieldError(input, "required");
-                    return false;
-                }
-                break;
-            }
-        case "RADIO":
-            {
-                if (input.getAttribute("required") != null) {
-                    var radios = document.getElementsByName(input.name);
-                    var radioIsValid = false;
-                    for (var i = 0; i < radios.length; i++) {
-                        if (radios[i].checked == true) {
-                            radioIsValid = true;
+                for (var i = 0, p = 0; i < value.length; i++, p++) {
+                    if (p > pattern.length) {
+                        value = value.substr(0, pattern.length);
+                        break;
+                    }
+                    else if (/^[0-9]$/.test(pattern[p])) {
+                        if (!/^[0-9]$/.test(value[i])) {
+                            value = value.substr(0, i);
                             break;
                         }
                     }
-
-                    if (radioIsValid == false) {
-                        fieldError(input, "required");
-                        return false;
+                    else if (/^[a-zA-Z]$/.test(pattern[p])) {
+                        if (!/^[a-zA-Z]$/.test(value[i])) {
+                            value = value.substr(0, i);
+                            break;
+                        }
+                    }
+                    else {
+                        value = value.substr(0, i) + pattern[p] + value.substr(i, value.length);
+                        i++; p++;
                     }
                 }
-                break;
+
+                element.value = value;
             }
-        default:
-            {
-                if (input.getAttribute("required") != null && trim(input.value) == "") {
-                    fieldError(input, "required");
-                    return false;
-                }
-
-                if (input.getAttribute("test") != null && fieldTest(input) == false) {
-                    fieldError(input, "test");
-                    return false;
-                }
-
-                if (input.getAttribute("min-length") != null && input.value.length < parseInt(input.getAttribute("min-length"))) {
-                    fieldError(input, "min-length");
-                    return false;
-                }
-
-                if (input.getAttribute("max-length") != null && input.value.length < parseInt(input.getAttribute("max-length"))) {
-                    fieldError(input, "max-length");
-                    return false;
-                }
-                break;
-            }
-    }
-
-    if (input.getAttribute("onvalidation") != null) {
-        if (!eval(input.getAttribute("onvalidation").replace("this", "input"))) {
-            fieldError(input, input.getAttribute("onvalidation"));
-            return false;
         }
-    }
 
-    fieldValid(input);
-    return true;
+        switch (event.type) {
+            case "keypress":
+                {
+                    var keyCode = event.which || event.keyCode;
+
+                    if (input.isNotValue(keyCode)) {
+                        return true;
+                    }
+
+                    while (true) {
+                        if (element.value.length >= pattern.length || !pattern[element.value.length]) {
+                            return false;
+                        }
+                        else if (/^[0-9]$/.test(pattern[element.value.length])) { //If numeric
+                            if (!isNaN(String.fromCharCode(keyCode))) {
+                                return true;
+                            }
+                            else {
+                                return false;
+                            }
+                        }
+                        else if (/^[a-zA-Z]$/.test(pattern[element.value.length])) { //If character only
+                            if (/^[a-zA-Z]$/.test(String.fromCharCode(keyCode))) {
+                                return true;
+                            }
+                            else {
+                                return false;
+                            }
+                        }
+                        else if (String.fromCharCode(keyCode) == pattern[element.value.length]) {
+                            return true;
+                        }
+                        else {
+                            element.value += pattern[element.value.length];
+                        }
+                    }
+                    break;
+                }
+            case "paste":
+                {
+                    var pasteData = event.clipboardData ? event.clipboardData.getData('text/plain') : "";
+                    for (var i = 0; i < pasteData.length; i++) {
+                        while (true) {
+                            if (element.value.length >= pattern.length || !pattern[element.value.length]) {
+                                break;
+                            }
+                            else if (/^[0-9]$/.test(pattern[element.value.length])) { //If numeric
+                                if (!isNaN(pasteData[i])) {
+                                    element.value += pasteData[i];
+                                    break;
+                                }
+                                else {
+                                    break;
+                                }
+                            }
+                            else if (/^[a-zA-Z]$/.test(pattern[element.value.length])) { //If character only
+                                if (/^[a-zA-Z]$/.test(pasteData[i])) {
+                                    element.value += pasteData[i];
+                                    break;
+                                }
+                                else {
+                                    break;
+                                }
+                            }
+                            else if (pasteData[i] == pattern[element.value.length]) {
+                                element.value += pasteData[i];
+                                break;
+                            }
+                            else {
+                                element.value += pattern[element.value.length];
+                            }
+                        }
+                    }
+
+                    if (event.preventDefault) {
+                        event.stopPropagation();
+                        event.preventDefault();
+                    }
+                    break;
+                }
+        }
+    };
+
+    // - Formats the [element] value if possible and returns true if the [element] value matches the format of [pattern].
+    input.formatCurrency = function (element, event, pattern) {        
+        event = event || window.event;
+        if (!element.originalValue) { element.originalValue = ""; }
+
+        // - TODO: Improvements with oninput to handle delete/backspace
+
+        switch (event.type) {
+            case "focus":
+                {
+                    if (element.value == "") {
+                        element.value = pattern;
+                    }
+                    break;
+                }
+            case "keypress":
+                {
+                    if (element.value == "") {
+                        element.value = pattern;
+                    }
+
+                    var keyCode = event.which || event.keyCode;
+
+                    if (input.isNotValue(keyCode)) {
+                        return true;
+                    }
+
+                    var value = String.fromCharCode(keyCode);
+
+                    if (isNaN(value)) {
+                        return false;
+                    }
+
+                    element.originalValue = parseInt(element.value.replace(/\D/g, '') + value).toString();
+                    element.formatValue = pattern;
+
+                    var length = pattern.length;
+                    var current = 0;
+                    var offset = 0;
+
+                    while (current < length) {
+                        if (current - offset >= element.originalValue.length) { break; }
+
+                        if (/^[0-9]$/.test(pattern[pattern.length - 1 - current])) {
+                            element.formatValue = element.formatValue.substr(0, element.formatValue.length - 1 - current) + element.originalValue[element.originalValue.length - 1 - current + offset] + element.formatValue.substr(element.formatValue.length - 1 - current + element.originalValue[element.originalValue.length - 1 - current + offset].length);
+                        }
+                        else {
+                            offset++;
+                        }
+
+                        current++;
+                    }
+
+                    if (element.originalValue.length + offset > length) {
+                        for (var i = element.originalValue.length - 1 - current + offset; i >= 0; i--) {
+                            element.formatValue = element.originalValue[i] + element.formatValue;
+                        }
+                    }
+
+                    element.value = element.formatValue;
+                    return false;
+                }
+            case "paste":
+                {
+                    var pasteData = event.clipboardData ? event.clipboardData.getData('text/plain') : "";
+                    if (isNaN(pasteData)) {
+                        if (event.preventDefault) {
+                            event.stopPropagation();
+                            event.preventDefault();
+                        }
+                        return false;
+                    }
+
+                    element.originalValue = pasteData;
+                    element.formatValue = pattern;
+
+                    var length = pattern.length;
+                    var current = 0;
+                    var offset = 0;
+
+                    while (current < length) {
+                        if (current - offset >= element.originalValue.length) { break; }
+
+                        if (/^[0-9]$/.test(pattern[pattern.length - 1 - current])) {
+                            element.formatValue = element.formatValue.substr(0, element.formatValue.length - 1 - current) + element.originalValue[element.originalValue.length - 1 - current + offset] + element.formatValue.substr(element.formatValue.length - 1 - current + element.originalValue[element.originalValue.length - 1 - current + offset].length);
+                        }
+                        else {
+                            offset++;
+                        }
+
+                        current++;
+                    }
+
+                    if (element.originalValue.length + offset > length) {
+                        for (var i = element.originalValue.length - 1 - current + offset; i >= 0; i--) {
+                            element.formatValue = element.originalValue[i] + element.formatValue;
+                        }
+                    }
+
+                    element.value = element.formatValue;
+
+                    if (event.preventDefault) {
+                        event.stopPropagation();
+                        event.preventDefault();
+                    }
+                    break;
+                }
+        }
+    };
+
+    // - Returns true if the [keyCode] is a non-value code (ie. Enter, Escape, etc).
+    input.isNotValue = function (keyCode) {
+        if (keyCode == 8 || keyCode == 9 || keyCode == 13 || keyCode == 27 || (keyCode > 32 && keyCode < 41) || keyCode == 46) {
+            return true;
+        }
+    };
+})(window.input = window.input || {});
+
+/*--------------- [ TEXT FUNCTIONS ] ---------------*/
+
+/*--------------- [ ELEMENT/NAVIGATION FUNCTIONS ] ---------------*/
+
+// - Returns the document element of [id].
+function $(id) {
+    return document.getElementById(id);
 }
 
-// - Calls the function specified on the [on-error] attribute.
-function fieldError(input, errorType) {
-    if (input.getAttribute("on-error") != null) {
-        eval(input.getAttribute("on-error").replace("this", "input").replace("type", "'" + errorType + "'"));
-    }
+// - Returns a new element of [element] type.
+function _$(element) {
+    return document.createElement(element);
 }
 
-// - Calls the function specified on the [on-correct] attribute.
-function fieldValid(input) {
-    if (input.getAttribute("on-correct") != null) {
-        eval(input.getAttribute("on-correct").replace("this", "input"));
-    }
-}
+(function (nav) {
+    // - Returns the next element (sibling in hierarchical order) after N matches.
+    nav.next = function (element, matches) {
+        var count = matches ? parseInt(matches) : 0;
+        while (element = element.nextSibling) {
+            if (element.nodeType != 1) { continue; }
+            if (count > 0) { count--; continue; }            
+            return element;
+        }
+        return false;
+    };
 
-// - Returns the test of the regex pattern in the [test] attribute.
-function fieldTest(input) {
-    var regExp = new RegExp(input.getAttribute("test"));
+    // - Returns the previous element (sibling in hierarchical order) after N matches.
+    nav.prev = function (element, matches) {
+        var count = matches ? parseInt(matches) : 0;
+        while (element = element.previousSibling) {
+            if (element.nodeType != 1) { continue; }
+            if (count > 0) { count--; continue; }
+            return element;
+        }
+        return false;
+    };
 
-    return regExp.test(input.value);
-}
+    // - Returns the first element after N matches.
+    nav.first = function (element, matches) {
+        var count = matches ? parseInt(matches) : 0;
+        for (var i = 0; i < element.childNodes.length; i++) {
+            if (element.childNodes[i].nodeType != 1) { continue; }
+            if (count > 0) { count--; continue; }
+            return element.childNodes[i];
+        }
+        return false;
+    };
+
+    // - Returns the last element after N matches.
+    nav.last = function (element, matches) {
+        var count = matches ? parseInt(matches) : 0;
+        for (var i = element.childNodes.length - 1; i >= 0; i--) {
+            if (element.childNodes[i].nodeType != 1) { continue; }
+            if (count > 0) { count--; continue; }
+            return element.childNodes[i];
+        }
+        return false;
+    };
+
+    // - Returns the first parent with the specified [parentID].
+    nav.findParentByID = function (element, parentID) {
+        while (object = object.parentNode) {
+            if (object.id == parentID) {
+                return object;
+            }
+        }
+        return false;
+    };
+
+    // - Returns the first parent by element name after N matches.
+    nav.findParent = function (element, name, matches) {
+        var count = matches ? parseInt(matches) : 0;
+        while (element = element.parentNode) {
+            if (element.nodeName.toUpperCase() != name) { continue; }
+            if (count > 0) { count--; continue; }
+            return element;
+        }
+        return false;
+    };
+
+    // - Returns the first child (recursively) by element name after N matches.
+    nav.findChild = function (element, name, matches) {
+        var count = matches ? parseInt(matches) : 0;
+        for (var i = 0; i < element.childNodes.length; i++) {
+            if (element.childNodes[i].nodeType != 1) { continue; }
+            if (element.childNodes[i].nodeName.toUpperCase() == name) {
+                if (count > 0) { count--; continue; }
+                return element.childNodes[i];
+            }
+            else if (element.childNodes[i].hasChildNodes()) {
+                var result = nav.findChild(element.childNodes[i], name, count);
+                if (result) { return result; }
+            }
+        }
+        return false;
+    };
+
+    // - Returns an array[2] of the position X and Y on screen of the object.
+    nav.findPosition = function (element) {
+        var left = 0, top = 0;
+        if (element.offsetParent) {
+            do {
+                left += element.offsetLeft;
+                top += element.offsetTop;
+            } while (element = element.offsetParent);
+        }
+        return [left, top];
+    };
+    
+    // - Returns a copy of a <template> tag.
+    nav.getTemplate = function (templateID) {
+        return document.importNode(document.getElementById(templateID).content, true);
+    };
+})(window.nav = window.nav || {});
+
+/*--------------- [ VALIDATION FUNCTIONS ] ---------------*/
+
+(function (form) {
+    // - Validates a form element and returns true if valid.
+    form.validate = function (element) {
+        var errors = 0;
+        for (var i = 0; i < element.length; i++) {
+            errors += form.validateInput(element[i]) ? 0 : 1;
+        }
+
+        return errors == 0;
+    };
+
+    // - Validates a input element and returns true if valid.
+    form.validateInput = function (element) {
+        switch (element.type.toUpperCase()) {
+            case "CHECKBOX":
+                {
+                    if (element.getAttribute("required") && element.checked == false) {
+                        form.inputError(element, "required");
+                        return false;
+                    }
+                    break;
+                }
+            case "RADIO":
+                {
+                    // - TODO: Improve, this checks once per radio button regardless if the group's been checked already.
+                    if (input.getAttribute("required")) {
+                        var isValid = false;
+                        for (var i = 0; i < element.form.length; i++) {
+                            if (!element.form[i].type.toUpperCase() == "RADIO" || element.form[i].name != element.name) { continue; }
+                            if (element.form[i].checked) {
+                                isValid = true;
+                                break;
+                            }
+                        }
+
+                        if (!isValid) {
+                            form.inputError(element, "required");
+                            return false;
+                        }
+                    }
+                    break;
+                }
+            case "NUMBER":
+                {
+                    if (element.getAttribute("required") && element.value == "") {
+                        form.inputError(element, "required");
+                        return false;
+                    }
+
+                    if (element.getAttribute("min")) {
+                        var min = parseInt(element.getAttribute("min"));
+                        var value = parseInt(element.value);
+                        if (isNaN(min) || isNaN(value) || value < min) {
+                            form.inputError(element, "min");
+                            return false;
+                        }
+                    }
+
+                    if (element.getAttribute("max")) {
+                        var max = parseInt(element.getAttribute("max"));
+                        var value = parseInt(element.value);
+                        if (isNaN(max) || isNaN(value) || value > max) {
+                            form.inputError(element, "max");
+                            return false;
+                        }
+                    }
+                    break;
+                }
+            case "DATE":
+                {
+                    if (element.getAttribute("required") && element.value == "") {
+                        form.inputError(element, "required");
+                        return false;
+                    }
+
+                    if (element.getAttribute("min")) {
+                        var min = Date.parse(element.getAttribute("min"));
+                        var value = Date.parse(element.value);
+                        if (isNaN(min) || isNaN(value) || value < min) {
+                            form.inputError(element, "min");
+                            return false;
+                        }
+                    }
+
+                    if (element.getAttribute("max")) {
+                        var max = Date.parse(element.getAttribute("max"));
+                        var value = Date.parse(element.value);
+                        if (isNaN(max) || isNaN(value) || value > max) {
+                            form.inputError(element, "max");
+                            return false;
+                        }
+                    }
+                    break;
+                }
+            default:
+                {
+                    if (element.getAttribute("required") && element.value == "") {
+                        form.inputError(element, "required");
+                        return false;
+                    }
+
+                    if (element.getAttribute("pattern")) {
+                        // - TODO: Test
+                        var regex = new RegExp(element.getAttribute("pattern"));
+                        if (!regex.test(element.value)) {
+                            form.inputError(element, "pattern");
+                            return false;
+                        }
+                    }
+
+                    if (element.getAttribute("min")) {
+                        var min = parseInt(element.getAttribute("min"));
+                        if (isNaN(min) || element.value.length < min) {
+                            form.inputError(element, "min");
+                            return false;
+                        }
+                    }
+
+                    if (element.getAttribute("max")) {
+                        var max = parseInt(element.getAttribute("max"));
+                        if (isNaN(max) || element.value.length < max) {
+                            form.inputError(element, "max");
+                            return false;
+                        }
+                    }
+                    break;
+                }            
+        }
+
+        if (element.getAttribute("validate")) {
+            if (!eval(element.getAttribute("validate").replace("this", "element"))) {
+                form.inputError(element, element.getAttribute("validate"));
+                return false;
+            }
+        }
+
+        form.inputValid(element);
+        return true;
+    };
+
+    // - Calls any function set to the [onerror] attribute.
+    form.inputError = function (element, type) {
+        if (input.getAttribute("onerror") != null) {
+            eval(input.getAttribute("onerror").replace("this", "element").replace("type", "'" + type + "'"));
+        }
+    };
+
+    // - Calls any function set to the [onvalid] attribute.
+    form.inputValid = function (element) {
+        if (input.getAttribute("onvalid") != null) {
+            eval(input.getAttribute("onvalid").replace("this", "element").replace("type", "'" + type + "'"));
+        }
+    };
+})(window.form = window.form || {});
+
+/*--------------- [ AJAX FUNCTIONS ] ---------------*/
+
+(function (ajax) {
+    // - Sends [data] (JSON) to the [url] and invokes [callback] with the response as parameter or "false" as parameter when the request fails.
+    ajax.post = function (url, data, callback) {
+        var request = new XMLHttpRequest();
+
+        request.onreadystatechange = function () {
+            if (request.readyState == 4) {
+                if (request.status == 200) {
+                    var response = request.responseText ? JSON.parse(request.responseText) : true;
+
+                    callback(response);
+                }
+                else {
+                    callback(false);
+                }
+            }
+        }
+
+        request.open("POST", url, true);
+        request.setRequestHeader("Content-Type", "application/json");
+        request.send(JSON.stringify(data));
+    };
+
+    // - Calls the [url] and invokes [callback] with the response as parameter or "false" as parameter when the request fails.
+    ajax.get = function (url, callback) {
+        var request = new XMLHttpRequest();
+
+        request.onreadystatechange = function () {
+            if (request.readyState == 4) {
+                if (request.status == 200) {
+                    var response = request.responseText ? JSON.parse(request.responseText) : true;
+
+                    callback(response);
+                }
+                else {
+                    callback();
+                }
+            }
+        }
+
+        request.open("GET", url, true);
+        request.send();
+    };
+
+    // - Submits the [form] element to the [url] and invokes [callback] with the response as parameter or "false" as parameter when the request fails.
+    ajax.submit = function (url, form, callback) {
+        var request = new XMLHttpRequest();
+        var data = new FormData(form);
+
+        request.onreadystatechange = function () {
+            if (request.readyState == 4) {
+                if (request.status == 200) {
+                    var response = request.responseText ? JSON.parse(request.responseText) : true;
+
+                    callback(response);
+                }
+                else {
+                    callback();
+                }
+            }
+        }
+
+        request.open("POST", url, true);
+        request.send(data);
+    };
+})(window.ajax = window.ajax || {});

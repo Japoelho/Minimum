@@ -51,7 +51,7 @@ namespace Minimum.DataAccess
                             object dataValue = dataReader[_map.Properties[i].ColumnName];
                             if (dataValue != DBNull.Value)
                             {
-                                _map.Properties[i].PropertyInfo.SetValue(entity, _statement.FormatReadValue(dataValue, _map.Properties[i].PropertyInfo.PropertyType), null);
+                                _map.Properties[i].SetValue(entity, _statement.FormatReadValue(dataValue, _map.Properties[i].Type));
                             }
                         }
 
@@ -117,11 +117,11 @@ namespace Minimum.DataAccess
                 IList<Criteria> criterias = new List<Criteria>();
                 for (int j = 0; j < map.Relations[i].On.Length; j++)
                 {
-                    object joinWhere = map.Properties.FirstOrDefault(p => p.ColumnName == map.Relations[i].On[j].ForeignKey).PropertyInfo.GetValue(entity);
+                    object joinWhere = map.Properties.FirstOrDefault(p => p.ColumnName == map.Relations[i].On[j].ForeignKey).GetValue(entity);
                     Property property = map.Relations[i].JoinMap.Properties.FirstOrDefault(p => p.ColumnName == map.Relations[i].On[j].PrimaryKey);
                     if (property == null) { throw new ArgumentException("Invalid On criteria for Join."); }
 
-                    criterias.Add(Criteria.EqualTo(property.PropertyInfo.Name, joinWhere));
+                    criterias.Add(Criteria.EqualTo(property.Name, joinWhere));
                 }
 
                 DbCommand command = connection.CreateCommand();
@@ -182,7 +182,7 @@ namespace Minimum.DataAccess
                 if (dataValue != DBNull.Value)
                 {
                     isEmpty = false;
-                    map.Properties[i].PropertyInfo.SetValue(entity, _statement.FormatReadValue(dataValue, map.Properties[i].PropertyInfo.PropertyType), null);
+                    map.Properties[i].SetValue(entity, _statement.FormatReadValue(dataValue, map.Properties[i].Type));
                 }
             }
 
@@ -217,7 +217,7 @@ namespace Minimum.DataAccess
                 if (dataValue != DBNull.Value)
                 {
                     isEmpty = false;
-                    map.Properties[i].PropertyInfo.SetValue(entity, _statement.FormatReadValue(dataValue, map.Properties[i].PropertyInfo.PropertyType), null);
+                    map.Properties[i].SetValue(entity, _statement.FormatReadValue(dataValue, map.Properties[i].Type));
                 }
             }
 
@@ -239,7 +239,7 @@ namespace Minimum.DataAccess
                         Property property = map.Relations[i].JoinMap.Properties.FirstOrDefault(p => p.ColumnName == map.Relations[i].On[j].PrimaryKey);
                         if (property == null) { throw new ArgumentException("Invalid On criteria for Join."); }
 
-                        criterias.Add(Criteria.EqualTo(property.PropertyInfo.Name, joinWhere));
+                        criterias.Add(Criteria.EqualTo(property.Name, joinWhere));
                     }
 
                     if (map.Relations[i].PropertyInfo.PropertyType.IsGenericType && map.Relations[i].PropertyInfo.PropertyType.GetGenericTypeDefinition() == typeof(LazyList<>))

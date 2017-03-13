@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Dynamic;
 using System.Linq;
 using System.Reflection;
 
@@ -9,7 +10,7 @@ namespace Minimum.DataAccess
     internal class AutoMapper : IMapper
     {
         private const string Identity_Not_Found = "No [Identity] property found on class {0}.";
-        private const string Command_Text_Null = "The command text is null.";
+        private const string Command_Text_Null = "The command text is null.";        
 
         public IMap Map(Type type)
         {
@@ -29,13 +30,39 @@ namespace Minimum.DataAccess
             return Map(type, new AliasFactory(), properties);
         }
 
+        public IMap DynamicMap(string table)
+        {
+            Map<Object> map = new Map<object>();
+            map.ToTable(table);
+            map.HasAlias("T");
+            map.IsDynamic = true;
+
+            return map;
+        }
+
+        public IMap DynamicMap(string table, dynamic type)
+        {
+            Map<Object> map = new Map<object>();
+            map.ToTable(table);
+            map.HasAlias("T");
+            map.IsDynamic = true;
+            
+            IDictionary<string, object> dictionary = type as IDictionary<string, object>;
+            for (int i = 0; i < dictionary.Keys.Count; i++)
+            {
+                map.Properties.Add(new Property().ToColumn(dictionary.Keys.ElementAt(i)));             
+            }
+
+            return map;
+        }
+
         private IMap Map(Type type, AliasFactory aliasFactory, IMap parent = null)
         {
             IMap map = (IMap)Activator.CreateInstance(typeof(Map<>).MakeGenericType(type));
             map.Parent = parent;
 
             Command command = Attribute.GetCustomAttribute(type, typeof(Command)) as Command;
-            if (command != null) 
+            if (command != null)
             {
                 if (String.IsNullOrEmpty(command.Text)) { throw new ArgumentException(Command_Text_Null); }
                 map.Command(command.Text); 
@@ -73,19 +100,37 @@ namespace Minimum.DataAccess
                 if (!properties[i].DeclaringType.Equals(type) && !isPartial) { continue; }
                 if (Attribute.GetCustomAttribute(properties[i], typeof(Ignore)) != null) { continue; }
 
+                Dynamic dynamicAttribute = Attribute.GetCustomAttribute(properties[i], typeof(Dynamic)) as Dynamic;
+
                 if (// - Se é classe não array diferente de "String" e "Object"
                     (properties[i].PropertyType.IsClass && !properties[i].PropertyType.IsArray && !properties[i].PropertyType.Equals(typeof(System.String)) && !properties[i].PropertyType.Equals(typeof(System.Object))) || 
                     // - Se é IList
-                    (properties[i].PropertyType.IsGenericType && (properties[i].PropertyType.GetGenericTypeDefinition() == typeof(IList<>) || typeof(IList).IsAssignableFrom(properties[i].PropertyType))))
+                    (properties[i].PropertyType.IsGenericType && (properties[i].PropertyType.GetGenericTypeDefinition() == typeof(IList<>) || typeof(IList).IsAssignableFrom(properties[i].PropertyType))) ||
+                    // - Se é Dynamic
+                    dynamicAttribute != null)
                 {
                     Relation relation = map.Relation(properties[i].Name);
                     relation.Property(properties[i]);
 
-                    IMap joinMap = Resolve(relation.Type, map) ?? Map(relation.Type, aliasFactory, map);
+                    if (dynamicAttribute != null)
+                    {
+                        Map<dynamic> dynamicMap = new Map<dynamic>();
+                        dynamicMap.ToDatabase(dynamicAttribute.Database);
+                        dynamicMap.ToSchema(dynamicAttribute.Schema);
+                        dynamicMap.ToTable(dynamicAttribute.Table);
+                        dynamicMap.HasAlias(aliasFactory.GenerateAlias(properties[i].PropertyType));
+                        dynamicMap.IsDynamic = true;
 
-                    relation.JoinWith(joinMap);
+                        relation.JoinWith(dynamicMap);
+                    }
+                    else
+                    {
+                        relation.JoinWith(Resolve(relation.Type, map) ?? Map(relation.Type, aliasFactory, map));
+                    }
+
                     relation.JoinAs(Attribute.GetCustomAttribute(properties[i], typeof(Join)) as Join);
                     relation.JoinOn(Attribute.GetCustomAttributes(properties[i], typeof(On)) as On[]);
+                    relation.OrderBy(Attribute.GetCustomAttributes(properties[i], typeof(Order)) as Order[]);
                     relation.Lazy(Attribute.GetCustomAttribute(properties[i], typeof(Lazy)) as Lazy);
                     relation.Cascade(Attribute.GetCustomAttribute(properties[i], typeof(Cascade)) != null);
 

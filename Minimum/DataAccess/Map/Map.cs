@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.ComponentModel.DataAnnotations;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
@@ -18,9 +19,10 @@ namespace Minimum.DataAccess
         public string Name { get { return (_database != null ? _database + "." : null) + (_schema != null ? _schema + "." : null) + _table; } }
         public string Alias { get { return _alias; } }
         public Type Type { get; private set; }
+        public bool IsDynamic { get; set; }
         public IList<Property> Properties { get; private set; }
         public IList<Relation> Relations { get; private set; }
-        public string QueryText { get; private set; }
+        public string QueryText { get; private set; }        
 
         public Map()
         {
@@ -111,19 +113,70 @@ namespace Minimum.DataAccess
 
     public class Property
     {
+        public string Name { get { return _propertyInfo != null ? _propertyInfo.Name : ColumnName; } }
         public string ColumnName { get; private set; }
         public bool IsIdentity { get; private set; }
         public bool IsCascade { get; private set; }
         public Type Type { get; private set; }
-        public PropertyInfo PropertyInfo { get; private set; }
+        
+        private PropertyInfo _propertyInfo;
+
+        public Property()
+        {
+            Type = typeof(Object);
+        }
 
         public Property(PropertyInfo propertyInfo)
-        {
+        {            
             Type = propertyInfo.PropertyType.IsGenericType ? propertyInfo.PropertyType.GetGenericArguments()[0] : propertyInfo.PropertyType;
-            PropertyInfo = propertyInfo;
+            _propertyInfo = propertyInfo;
 
             // - Default Value
             ColumnName = propertyInfo.Name;
+        }
+
+        public object GetValue(object entity)
+        {
+            if (_propertyInfo == null) { return (entity as IDictionary<string, object>)[ColumnName]; }
+
+            return _propertyInfo.GetValue(entity);
+        }
+
+        public void SetValue(object entity, object value)
+        {
+            if (_propertyInfo == null) { (entity as IDictionary<string, object>)[ColumnName] = value; }
+
+            _propertyInfo.SetValue(entity, value);
+        }
+
+        public bool IsNullable()
+        {
+            if (_propertyInfo == null) { return true; }
+
+            if (Attribute.GetCustomAttribute(_propertyInfo, typeof(RequiredAttribute)) != null) { return false; }
+
+            if (_propertyInfo.PropertyType.IsGenericType && _propertyInfo.PropertyType.GetGenericTypeDefinition() == typeof(Nullable<>))
+            { return true; }
+
+            if (_propertyInfo.PropertyType.IsEnum) { return false; }
+
+            switch (_propertyInfo.PropertyType.Name)
+            {
+                case "Int16":
+                case "Int32":
+                case "Int64":
+                case "Boolean":
+                    return false;
+                case "Single":
+                case "Decimal":
+                    return true;
+                case "DateTime":
+                    return false;
+                case "String":
+                case "Object":
+                default:
+                    return true;
+            }
         }
 
         public Property ToColumn(Column column)
@@ -159,6 +212,7 @@ namespace Minimum.DataAccess
     {
         public IMap JoinMap { get; private set; }
         public JoinType JoinType { get; private set; }
+        public Order[] Order { get; private set; }
         public On[] On { get; private set; }
         public bool IsInheritance { get; private set; }
         public bool IsLazy { get; private set; }
@@ -187,6 +241,13 @@ namespace Minimum.DataAccess
         public Relation JoinOn(On[] on)
         {
             On = on;
+
+            return this;
+        }
+
+        public Relation OrderBy(Order[] order)
+        {
+            Order = order;
 
             return this;
         }

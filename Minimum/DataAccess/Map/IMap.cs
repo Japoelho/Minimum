@@ -9,9 +9,10 @@ namespace Minimum.DataAccess
         string Alias { get; }
         string Name { get; }
         Type Type { get; }
+        bool IsDynamic { get; }
         IList<Property> Properties { get; }
         IList<Relation> Relations { get; }
-        string QueryText { get; }
+        string QueryText { get; }        
 
         Property Property(string property);
         Relation Relation(string property);

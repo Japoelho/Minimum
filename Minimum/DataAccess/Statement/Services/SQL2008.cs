@@ -53,6 +53,8 @@ namespace Minimum.DataAccess.Statement
 
         private string SelectColumns(IMap map)
         {
+            if (map.IsDynamic) { return map.Alias + ".*"; }
+
             StringBuilder columns = new StringBuilder();
 
             bool comma = false;
@@ -222,7 +224,7 @@ namespace Minimum.DataAccess.Statement
                 if (comma) { columns.Append(", "); }
                 columns.Append(map.Properties[i].ColumnName);
                 columns.Append(" = ");
-                columns.Append(FormatWriteValue(map.Properties[i].PropertyInfo.GetValue(element), map.Properties[i].Type));
+                columns.Append(FormatWriteValue(map.Properties[i].GetValue(element), map.Properties[i].Type));
                 comma = true;
             }
 
@@ -253,7 +255,7 @@ namespace Minimum.DataAccess.Statement
             bool comma = false;
             for (int i = 0; i < map.Properties.Count; i++)
             {
-                if (map.Properties[i].IsIdentity && (int)map.Properties[i].PropertyInfo.GetValue(element) == 0) { continue; }
+                if (map.Properties[i].IsIdentity && (int)map.Properties[i].GetValue(element) == 0) { continue; }
 
                 if (comma) { columns.Append(", "); }
                 columns.Append(map.Properties[i].ColumnName);
@@ -270,10 +272,10 @@ namespace Minimum.DataAccess.Statement
             bool comma = false;
             for (int i = 0; i < map.Properties.Count; i++)
             {
-                if (map.Properties[i].IsIdentity && (int)map.Properties[i].PropertyInfo.GetValue(element) == 0) { continue; }
+                if (map.Properties[i].IsIdentity && (int)map.Properties[i].GetValue(element) == 0) { continue; }
 
                 if (comma) { values.Append(", "); }
-                values.Append(FormatWriteValue(map.Properties[i].PropertyInfo.GetValue(element), map.Properties[i].Type));
+                values.Append(FormatWriteValue(map.Properties[i].GetValue(element), map.Properties[i].Type));
                 comma = true;
             }
 
@@ -543,6 +545,7 @@ namespace Minimum.DataAccess.Statement
                 case CriteriaType.Member:
                     {
                         IMap currentMap = map;
+                        if (currentMap.IsDynamic) { condition.Append(useAlias ? currentMap.Alias + "." + (criteria as MemberCriteria).Name : (criteria as MemberCriteria).Name); break; }
 
                         Property property = null;
                         while ((criteria as MemberCriteria) != null)
@@ -550,7 +553,7 @@ namespace Minimum.DataAccess.Statement
                             property = null;
                             if ((criteria as MemberCriteria).Member == null)
                             {
-                                property = currentMap.Properties.FirstOrDefault(c => c.PropertyInfo.Name == (criteria as MemberCriteria).Name);
+                                property = currentMap.Properties.FirstOrDefault(c => c.Name == (criteria as MemberCriteria).Name);
                                 if (property != null) { break; }
 
                                 Relation join = currentMap.Relations.FirstOrDefault(j => j.IsInheritance);

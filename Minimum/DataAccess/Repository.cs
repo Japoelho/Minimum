@@ -57,7 +57,7 @@ namespace Minimum.DataAccess
             Property identity = query.Map.Properties.FirstOrDefault(p => p.IsIdentity);
             if (identity == null) { throw new InvalidOperationException(String.Format(NoKeyDefined, typeof(T).Name)); }
 
-            return query.Where(Criteria.EqualTo(identity.PropertyInfo.Name, entityID)).Select().FirstOrDefault();
+            return query.Where(Criteria.EqualTo(identity.Name, entityID)).Select().FirstOrDefault();
         }
 
         public IList<T> Select<T>() where T : class
@@ -80,7 +80,7 @@ namespace Minimum.DataAccess
 
             return query.Where(expression).Select();
         }
-        
+
         public T Update<T>(T entity) where T : class
         {
             Query<T> query = new Query<T>(_connection, _mapper.Map(typeof(T)));
@@ -88,17 +88,17 @@ namespace Minimum.DataAccess
             Property identity = query.Map.Properties.FirstOrDefault(p => p.IsIdentity);
             if (identity == null) { throw new InvalidOperationException(String.Format(NoKeyDefined, typeof(T).Name)); }
 
-            return query.Where(Criteria.EqualTo(identity.PropertyInfo.Name, identity.PropertyInfo.GetValue(entity))).Update(entity);
+            return query.Where(Criteria.EqualTo(identity.Name, identity.GetValue(entity))).Update(entity);
         }
 
-        public T Update<T>(T entity, params string[] properties) where T : class 
+        public T Update<T>(T entity, params string[] properties) where T : class
         {
             Query<T> query = new Query<T>(_connection, _mapper.Map(typeof(T), properties));
 
             Property identity = query.Map.Properties.FirstOrDefault(p => p.IsIdentity);
             if (identity == null) { throw new InvalidOperationException(String.Format(NoKeyDefined, typeof(T).Name)); }
 
-            return query.Where(Criteria.EqualTo(identity.PropertyInfo.Name, identity.PropertyInfo.GetValue(entity))).Update(entity);
+            return query.Where(Criteria.EqualTo(identity.Name, identity.GetValue(entity))).Update(entity);
         }
 
         public T Update<T>(T entity, params Expression<Func<T, object>>[] properties) where T : class
@@ -108,7 +108,7 @@ namespace Minimum.DataAccess
             Property identity = query.Map.Properties.FirstOrDefault(p => p.IsIdentity);
             if (identity == null) { throw new InvalidOperationException(String.Format(NoKeyDefined, typeof(T).Name)); }
 
-            return query.Where(Criteria.EqualTo(identity.PropertyInfo.Name, identity.PropertyInfo.GetValue(entity))).Update(entity);
+            return query.Where(Criteria.EqualTo(identity.Name, identity.GetValue(entity))).Update(entity);
         }
 
         public T Insert<T>(T entity) where T : class
@@ -125,7 +125,7 @@ namespace Minimum.DataAccess
             Property identity = query.Map.Properties.FirstOrDefault(p => p.IsIdentity);
             if (identity == null) { throw new InvalidOperationException(String.Format(NoKeyDefined, typeof(T).Name)); }
 
-            return query.Where(Criteria.EqualTo(identity.PropertyInfo.Name, identity.PropertyInfo.GetValue(entity))).Delete(entity);
+            return query.Where(Criteria.EqualTo(identity.Name, identity.GetValue(entity))).Delete(entity);
         }
         
         public T Cascade<T>(T entity) where T : class
@@ -135,7 +135,7 @@ namespace Minimum.DataAccess
             Property identity = map.Properties.FirstOrDefault(p => p.IsIdentity);
             if (identity == null) { throw new InvalidOperationException(String.Format(NoKeyDefined, typeof(T).Name)); }
 
-            T original = Select<T>((int)identity.PropertyInfo.GetValue(entity));
+            T original = Select<T>((int)identity.GetValue(entity));
 
             return Compare<T>(entity, original, map);
         }
@@ -179,25 +179,28 @@ namespace Minimum.DataAccess
                             object objectA = listA[j];
                             object objectB = null;
 
-                            object aID = identity.PropertyInfo.GetValue(listA[j]);
-                            for (int h = 0; h < listB.Count; h++)
+                            object aID = identity.GetValue(listA[j]);
+                            if (listB != null)
                             {
-                                object oID = identity.PropertyInfo.GetValue(listB[h]);
-                                if (aID.Equals(oID))
+                                for (int h = 0; h < listB.Count; h++)
                                 {
-                                    objectB = listB[h];
-                                    listB.Remove(objectB);
-                                    break;
+                                    object oID = identity.GetValue(listB[h]);
+                                    if (aID.Equals(oID))
+                                    {
+                                        objectB = listB[h];
+                                        listB.Remove(objectB);
+                                        break;
+                                    }
                                 }
                             }
 
                             for (int h = 0; h < map.Relations[i].On.Length; h++)
                             {
                                 Property parent = map.Properties.FirstOrDefault(p => p.ColumnName == map.Relations[i].On[h].ForeignKey);
-                                object joinValue = parent.PropertyInfo.GetValue(update);
+                                object joinValue = parent.GetValue(update);
 
                                 Property join = map.Relations[i].JoinMap.Properties.FirstOrDefault(p => p.ColumnName == map.Relations[i].On[h].PrimaryKey);
-                                join.PropertyInfo.SetValue(objectA, joinValue);
+                                join.SetValue(objectA, joinValue);
                             }
 
                             compare.Invoke(this, new object[] { objectA, objectB, oMap });
@@ -259,10 +262,70 @@ namespace Minimum.DataAccess
 
             return true;
         }
+        
+        public IList<dynamic> DynamicSelect(string table)
+        {
+            Query<Object> query = new Query<Object>(_connection, _mapper.DynamicMap(table));
+
+            return query.Select();
+        }
+
+        public IList<dynamic> DynamicSelect(string table, params Criteria[] criterias)
+        {
+            Query<Object> query = new Query<Object>(_connection, _mapper.DynamicMap(table));
+
+            return query.Where(criterias).Select();
+        }
+
+        public dynamic DynamicUpdate(string table, string identity, dynamic entity)
+        {
+            Query<Object> query = new Query<Object>(_connection, _mapper.DynamicMap(table, entity));
+
+            Property property = query.Map.Properties.FirstOrDefault(p => p.ColumnName.ToUpper() == identity.ToUpper());
+            if (property == null) { throw new InvalidOperationException(String.Format(NoKeyDefined, table)); }
+            property.Identity(true);
+            
+            return query.Where(Criteria.EqualTo(identity, (entity as IDictionary<string, object>)[identity])).Update(entity);
+        }
+
+        public dynamic DynamicInsert(string table, string identity, dynamic entity)
+        {
+            Query<Object> query = new Query<Object>(_connection, _mapper.DynamicMap(table, entity));
+
+            Property property = query.Map.Properties.FirstOrDefault(p => p.ColumnName.ToUpper() == identity.ToUpper());
+            if (property != null) { property.Identity(true); }
+
+            return query.Insert(entity);
+        }
+
+        public dynamic DynamicDelete(string table, string identity, dynamic entity)
+        {
+            Query<Object> query = new Query<Object>(_connection, _mapper.DynamicMap(table, entity));
+
+            Property property = query.Map.Properties.FirstOrDefault(p => p.ColumnName.ToUpper() == identity.ToUpper());
+            if (property == null) { throw new InvalidOperationException(String.Format(NoKeyDefined, table)); }
+            property.Identity(true);
+
+            return query.Where(Criteria.EqualTo(property.Name, property.GetValue(entity))).Delete(entity);
+        }
+
+        public bool DynamicCreate(string table, string identity, dynamic entity)
+        {
+            Query<Object> query = new Query<Object>(_connection, _mapper.DynamicMap(table, entity));
+
+            query.Create();
+
+            return true;
+        }
 
         public ConnectionTest Test()
         {
             return _connection.TestConnection();
+        }
+
+        public IConnection GetConnection()
+        {
+            return _connection;
         }
     }
 }
